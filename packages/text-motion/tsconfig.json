@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@react-native-motion-kit/text-motion": ["./src/index"]
+    },
+    "customConditions": [
+      "react-native-motion-kit-text-motion-source",
+      "react-native-strict-api"
+    ]
+  },
+  "include": ["src/**/*"]
+}

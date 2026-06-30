@@ -1,0 +1,26 @@
+{
+  "name": "@react-native-motion-kit/text-motion-root",
+  "private": true,
+  "description": "Composable text motion primitives for React Native.",
+  "scripts": {
+    "build": "pnpm --filter @react-native-motion-kit/text-motion run build",
+    "clean": "pnpm --filter @react-native-motion-kit/text-motion run clean",
+    "example": "pnpm --filter example run",
+    "test": "pnpm --filter @react-native-motion-kit/text-motion run test",
+    "typecheck": "pnpm -r --if-present run typecheck"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^21.0.2",
+    "commitlint": "^21.0.2",
+    "lefthook": "^2.1.9"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24.13.0"
+  }
+}

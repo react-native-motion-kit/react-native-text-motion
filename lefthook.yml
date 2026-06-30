@@ -1,0 +1,11 @@
+pre-commit:
+  parallel: true
+  commands:
+    types:
+      glob: '**/*.{js,ts,jsx,tsx}'
+      run: corepack pnpm run typecheck
+commit-msg:
+  parallel: true
+  commands:
+    commitlint:
+      run: corepack pnpm commitlint --edit
