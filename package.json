@@ -6,6 +6,7 @@
     "build": "pnpm --filter @react-native-motion-kit/text-motion run build",
     "clean": "pnpm --filter @react-native-motion-kit/text-motion run clean",
     "example": "pnpm --filter example run",
+    "example:build": "pnpm -C example build",
     "test": "pnpm --filter @react-native-motion-kit/text-motion run test",
     "typecheck": "pnpm -r --if-present run typecheck"
   },
