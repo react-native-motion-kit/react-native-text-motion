@@ -1,6 +1,6 @@
-import { TextMotionRecipeBuilder } from './recipe';
+import { createTextMotionRecipeBuilder, type TextMotionRecipeBuilder } from './recipe';
 
 /** Start a composable text motion recipe. */
 export function defineTextMotion(): TextMotionRecipeBuilder {
-  return new TextMotionRecipeBuilder();
+  return createTextMotionRecipeBuilder();
 }

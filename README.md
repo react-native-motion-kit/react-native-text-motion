@@ -20,6 +20,8 @@ split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> compo
 
 Use presets when you want a good default quickly. Compose a recipe when you need to control tokenization, timing, effects, accessibility, or renderer choice.
 
+For TypeScript users, `.component()` is only available after a renderer is selected with `.layout(...)`. `.recipe()` can still be used before layout when you need to inspect or pass around an unfinished recipe.
+
 Quick preset usage:
 
 ```tsx

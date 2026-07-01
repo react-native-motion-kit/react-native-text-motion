@@ -20,6 +20,8 @@ split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> compo
 
 Use a preset when you want a good default. Create a custom recipe when you need to decide how text is split, how tokens are rendered, when each visible token starts, and what each token does.
 
+For TypeScript users, `.component()` is only available after a renderer is selected with `.layout(...)`. `.recipe()` can still be used before layout when you need to inspect or pass around an unfinished recipe.
+
 ## Installation
 
 ```sh

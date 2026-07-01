@@ -18,6 +18,10 @@ const testRenderer: TextMotionRenderer<'native-text'> = createTextMotionRenderer
   Component: () => null,
 });
 
+type UnsafeComponentBuilder = {
+  component(): (props: { children: string }) => unknown;
+};
+
 describe('defineTextMotion', () => {
   it('creates immutable recipe builders', () => {
     const base = defineTextMotion().layout(testRenderer);
@@ -44,7 +48,7 @@ describe('defineTextMotion', () => {
   });
 
   it('throws when a recipe component has no renderer', () => {
-    const Component = defineTextMotion().component() as (props: { children: string }) => unknown;
+    const Component = (defineTextMotion() as unknown as UnsafeComponentBuilder).component();
 
     expect(() => Component({ children: 'Missing renderer' })).toThrow('requires a renderer');
   });

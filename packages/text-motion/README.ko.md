@@ -20,6 +20,8 @@ split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> compo
 
 빠르게 쓰고 싶으면 preset을 사용하면 되고, 세부 동작을 잡고 싶으면 텍스트를 어떻게 쪼갤지, token을 어떻게 렌더링할지, 각 visible token이 언제 시작할지, 어떤 motion을 적용할지를 직접 조합하면 됩니다.
 
+TypeScript에서는 `.layout(...)`으로 renderer를 선택한 뒤에만 `.component()`를 호출할 수 있습니다. 아직 renderer를 정하지 않은 recipe를 확인하거나 전달해야 한다면 `.recipe()`는 layout 전에도 사용할 수 있습니다.
+
 ## 설치
 
 ```sh

@@ -26,6 +26,59 @@ type RecipeDraft<RendererCapabilities extends TextMotionRendererCapability> = {
 type RequiredCapabilitiesOfEffect<Effect extends TextMotionAnyEffect> =
   Effect extends TextMotionEffect<infer RequiredCapabilities> ? RequiredCapabilities : never;
 
+type TextMotionRecipeBuilderMethods<
+  RendererCapabilities extends TextMotionRendererCapability,
+  CurrentBuilder,
+> = {
+  /** Choose how the input string is split into tokens. */
+  split(splitter: TextMotionSplitter): CurrentBuilder;
+
+  /** Choose the renderer responsible for measuring and drawing tokens. */
+  layout<NextCapabilities extends TextMotionRendererCapability>(
+    renderer: TextMotionRenderer<NextCapabilities>,
+  ): TextMotionRenderableRecipeBuilder<NextCapabilities>;
+
+  /** Choose the timing strategy for token delays. */
+  timeline(timeline: TextMotionAnyTimeline): CurrentBuilder;
+
+  /** Add an effect that is compatible with the selected renderer. */
+  effect<Effect extends TextMotionAnyEffect>(
+    effect: TextMotionCompatibleEffect<
+      RendererCapabilities,
+      RequiredCapabilitiesOfEffect<Effect>,
+      Effect
+    >,
+  ): CurrentBuilder;
+
+  /** Configure the Reanimated motion primitive used by the renderer. */
+  motion(motion: TextMotionMotionConfig): CurrentBuilder;
+
+  /** Configure accessibility behavior such as reduced motion and token hiding. */
+  accessibility(accessibility: TextMotionAccessibilityPolicy): CurrentBuilder;
+
+  /** Return the immutable recipe config. */
+  recipe(): TextMotionRecipeConfig<RendererCapabilities>;
+};
+
+/** Builder state before a renderer has been selected. */
+export interface TextMotionRecipeBuilder<
+  RendererCapabilities extends TextMotionRendererCapability = never,
+> extends TextMotionRecipeBuilderMethods<
+  RendererCapabilities,
+  TextMotionRecipeBuilder<RendererCapabilities>
+> {}
+
+/** Builder state after a renderer has been selected. */
+export interface TextMotionRenderableRecipeBuilder<
+  RendererCapabilities extends TextMotionRendererCapability,
+> extends TextMotionRecipeBuilderMethods<
+  RendererCapabilities,
+  TextMotionRenderableRecipeBuilder<RendererCapabilities>
+> {
+  /** Create a React component from the current recipe. */
+  component(): TextMotionComponent;
+}
+
 function cloneTimingOptions(
   options: Extract<TextMotionMotionConfig, { kind: 'timing' }>['options'],
 ) {
@@ -125,10 +178,11 @@ function cloneDraft<RendererCapabilities extends TextMotionRendererCapability>(
   };
 }
 
-/** Immutable builder used to compose a text motion recipe. */
-export class TextMotionRecipeBuilder<
-  RendererCapabilities extends TextMotionRendererCapability = never,
-> {
+class TextMotionRecipeBuilderImpl<RendererCapabilities extends TextMotionRendererCapability = never>
+  implements
+    TextMotionRecipeBuilder<RendererCapabilities>,
+    TextMotionRenderableRecipeBuilder<RendererCapabilities>
+{
   private readonly draft: RecipeDraft<RendererCapabilities>;
 
   constructor(draft: Partial<RecipeDraft<RendererCapabilities>> = {}) {
@@ -143,8 +197,8 @@ export class TextMotionRecipeBuilder<
   }
 
   /** Choose how the input string is split into tokens. */
-  split(splitter: TextMotionSplitter): TextMotionRecipeBuilder<RendererCapabilities> {
-    return new TextMotionRecipeBuilder({
+  split(splitter: TextMotionSplitter): TextMotionRecipeBuilderImpl<RendererCapabilities> {
+    return new TextMotionRecipeBuilderImpl<RendererCapabilities>({
       ...cloneDraft(this.draft),
       splitter,
     });
@@ -153,16 +207,16 @@ export class TextMotionRecipeBuilder<
   /** Choose the renderer responsible for measuring and drawing tokens. */
   layout<NextCapabilities extends TextMotionRendererCapability>(
     renderer: TextMotionRenderer<NextCapabilities>,
-  ): TextMotionRecipeBuilder<NextCapabilities> {
-    return new TextMotionRecipeBuilder<NextCapabilities>({
+  ): TextMotionRecipeBuilderImpl<NextCapabilities> {
+    return new TextMotionRecipeBuilderImpl<NextCapabilities>({
       ...cloneDraft(this.draft),
       renderer,
     });
   }
 
   /** Choose the timing strategy for token delays. */
-  timeline(timeline: TextMotionAnyTimeline): TextMotionRecipeBuilder<RendererCapabilities> {
-    return new TextMotionRecipeBuilder({
+  timeline(timeline: TextMotionAnyTimeline): TextMotionRecipeBuilderImpl<RendererCapabilities> {
+    return new TextMotionRecipeBuilderImpl<RendererCapabilities>({
       ...cloneDraft(this.draft),
       timeline,
     });
@@ -175,16 +229,16 @@ export class TextMotionRecipeBuilder<
       RequiredCapabilitiesOfEffect<Effect>,
       Effect
     >,
-  ): TextMotionRecipeBuilder<RendererCapabilities> {
-    return new TextMotionRecipeBuilder({
+  ): TextMotionRecipeBuilderImpl<RendererCapabilities> {
+    return new TextMotionRecipeBuilderImpl<RendererCapabilities>({
       ...cloneDraft(this.draft),
       effects: [...this.draft.effects, effect],
     });
   }
 
   /** Configure the Reanimated motion primitive used by the renderer. */
-  motion(motion: TextMotionMotionConfig): TextMotionRecipeBuilder<RendererCapabilities> {
-    return new TextMotionRecipeBuilder({
+  motion(motion: TextMotionMotionConfig): TextMotionRecipeBuilderImpl<RendererCapabilities> {
+    return new TextMotionRecipeBuilderImpl<RendererCapabilities>({
       ...cloneDraft(this.draft),
       motion: validateMotionConfig(motion),
     });
@@ -193,8 +247,8 @@ export class TextMotionRecipeBuilder<
   /** Configure accessibility behavior such as reduced motion and token hiding. */
   accessibility(
     accessibility: TextMotionAccessibilityPolicy,
-  ): TextMotionRecipeBuilder<RendererCapabilities> {
-    return new TextMotionRecipeBuilder({
+  ): TextMotionRecipeBuilderImpl<RendererCapabilities> {
+    return new TextMotionRecipeBuilderImpl<RendererCapabilities>({
       ...cloneDraft(this.draft),
       accessibility,
     });
@@ -209,4 +263,9 @@ export class TextMotionRecipeBuilder<
   component(): TextMotionComponent {
     return createTextMotionComponent(cloneDraft(this.draft));
   }
+}
+
+/** @internal */
+export function createTextMotionRecipeBuilder(): TextMotionRecipeBuilder {
+  return new TextMotionRecipeBuilderImpl();
 }

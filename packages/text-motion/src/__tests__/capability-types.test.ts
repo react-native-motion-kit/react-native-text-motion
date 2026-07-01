@@ -3,6 +3,7 @@ import {
   fade,
   graphemes,
   nativeText,
+  parentLabelPolicy,
   stagger,
   wave,
   words,
@@ -29,6 +30,9 @@ function expectExtensionFactoriesStayInternal() {
 
   // @ts-expect-error renderer capability factories are intentionally not root public API in the MVP.
   void publicApi.createTextMotionRendererCapability;
+
+  // @ts-expect-error recipe implementation factories are intentionally not root public API.
+  void publicApi.createTextMotionRecipeBuilder;
 }
 
 void expectExtensionFactoriesStayInternal;
@@ -42,6 +46,32 @@ function expectNativeTextRejectsSkiaOnlyEffects() {
 }
 
 void expectNativeTextRejectsSkiaOnlyEffects;
+
+function expectComponentRequiresLayout() {
+  defineTextMotion().recipe();
+
+  // @ts-expect-error component requires a renderer selected with .layout(...).
+  defineTextMotion().component();
+
+  defineTextMotion()
+    .split(words())
+    .timeline(stagger(0.032))
+    .motion({ kind: 'timing', options: { duration: 240 } })
+    .accessibility(parentLabelPolicy())
+    .recipe();
+
+  defineTextMotion()
+    .split(words())
+    .timeline(stagger(0.032))
+    .motion({ kind: 'timing', options: { duration: 240 } })
+    .accessibility(parentLabelPolicy())
+    // @ts-expect-error component requires a renderer selected with .layout(...).
+    .component();
+
+  defineTextMotion().layout(nativeText()).component();
+}
+
+void expectComponentRequiresLayout;
 
 function expectStableMotionKindsOnly() {
   // @ts-expect-error custom motion is deferred until it has a runtime contract.
