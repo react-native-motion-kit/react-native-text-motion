@@ -3,12 +3,11 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@react-native-motion-kit/text-motion": ["./src/index"]
+      "@react-native-motion-kit/text-motion": ["./src/index"],
+      "@react-native-motion-kit/text-motion/presets": ["./src/presets/index"]
     },
-    "customConditions": [
-      "react-native-motion-kit-text-motion-source",
-      "react-native-strict-api"
-    ]
+    "customConditions": ["react-native-motion-kit-text-motion-source", "react-native-strict-api"],
+    "types": ["jest"]
   },
   "include": ["src/**/*"]
 }

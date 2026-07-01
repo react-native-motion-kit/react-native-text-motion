@@ -22,6 +22,10 @@ config.resolver.nodeModulesPaths = [
 
 config.resolver.extraNodeModules = {
   '@react-native-motion-kit/text-motion': textMotionPackageRoot,
+  '@react-native-motion-kit/text-motion/presets': path.resolve(
+    textMotionPackageRoot,
+    'src/presets',
+  ),
 };
 
 config.resolver.unstable_conditionNames = [

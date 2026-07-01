@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  typecheck:
+  lint-and-typecheck:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,6 +24,12 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Lint files
+        run: pnpm run lint:ci
+
+      - name: Format check
+        run: pnpm run format:check
 
       - name: Typecheck files
         run: pnpm run typecheck

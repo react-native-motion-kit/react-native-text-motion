@@ -7,21 +7,28 @@
     "clean": "pnpm --filter @react-native-motion-kit/text-motion run clean",
     "example": "pnpm --filter example run",
     "example:build": "pnpm -C example build",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:ci": "oxlint --format=github",
+    "lint:fix": "oxlint --fix",
     "test": "pnpm --filter @react-native-motion-kit/text-motion run test",
     "typecheck": "pnpm -r --if-present run typecheck"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^21.0.2",
     "commitlint": "^21.0.2",
-    "lefthook": "^2.1.9"
+    "lefthook": "^2.1.9",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0"
   },
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
     ]
   },
-  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=24.13.0"
-  }
+  },
+  "packageManager": "pnpm@11.9.0"
 }
