@@ -66,7 +66,9 @@ const WordReveal = defineTextMotion()
 
 `nativeText()` is a transform-first token renderer. It uses a wrapping `View` with animated `Text` tokens so transform effects are visible in React Native. It is not a full React Native `Text` drop-in, and layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
 
-Skia, stable line reveal, controller playback, rich text, and RN-rendered line-to-token mapping are deferred.
+Current MVP playback is lifecycle-driven, not externally controlled. Animated tokens autoplay on mount, ordinary parent rerenders with the same text/recipe preserve in-flight progress, and text/effect/timeline/motion changes replay the affected token animation. `final-state` reduced-motion policy renders the final style without flashing through the animated initial state.
+
+Skia, stable line reveal, controller playback, controlled progress, rich text, and RN-rendered line-to-token mapping are deferred.
 
 ## Install
 
@@ -113,13 +115,14 @@ Use this package today when you need:
 Wait for a later version if you need:
 
 - stable playback controls such as `play`, `pause`, `seek`, `reset`, or `reverse`
+- controlled progress via external shared values
 - scroll-driven, gesture-driven, or in-view text motion
 - precise line reveal, masked reveal, or token-to-line mapping
 - Skia effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text with links, selectable text, or full native `Text` layout parity
 - heavy use across long paragraphs, virtualized lists, or dense UI without your own performance validation
 
-Next focus: motion drivers and playback control. The core should first make replay/reset/play behavior explicit, then support controlled progress through Reanimated shared values. Line-aware effects and optional Skia renderers come after the native renderer, layout behavior, and performance envelope are more proven.
+Next focus: controlled progress ownership. The core should distinguish uncontrolled mount autoplay, externally controlled shared-value progress, and future controls-driven progress before exposing `play`, `pause`, `reset`, or in-view/scroll drivers. Line-aware effects and optional Skia renderers come after the native renderer, layout behavior, and performance envelope are more proven.
 
 ## License
 

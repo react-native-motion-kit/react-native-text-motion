@@ -92,6 +92,8 @@ The `0.032` value is seconds. Each visible token starts 32ms after the previous 
 
 `timing` options follow Reanimated's `withTiming` config and `spring` options follow Reanimated's `withSpring` config. `reduceMotion` is intentionally not accepted there because text-motion controls reduced-motion behavior through the accessibility policy.
 
+Function-valued options, such as a custom `easing`, are compared by reference when text-motion decides whether an in-flight animation should keep playing or replay. Hoist or reuse the same function reference when a parent rerender should preserve progress; creating a new function is treated as a motion config change.
+
 ## Presets
 
 Presets are composable recipe factories, not string names.
@@ -261,6 +263,19 @@ const TestableReveal = defineTextMotion()
   .component();
 ```
 
+## Playback Lifecycle
+
+The stable MVP lifecycle is automatic and input-driven. It does not expose manual playback controls yet.
+
+- Initial mount autoplays animated visible tokens from their initial style to their target style.
+- Parent rerenders with the same text and same recipe preserve in-flight progress.
+- Text changes replay the affected token animation, even when the token shape is the same.
+- Effect, timeline, or motion config changes reset affected animated tokens and autoplay with the updated inputs.
+- Whitespace/static tokens preserve layout text but do not animate or consume motion index.
+- `parentLabelPolicy({ reducedMotion: 'final-state' })` keeps reduced-motion users at the final style without flashing through the initial animated state.
+
+The example app may remount its demo player to make repeated inspection convenient. Treat that as demo UI behavior, not the recommended app API. Stable `play`, `pause`, `seek`, `reset`, `reverse`, controlled `progress`, screen focus, in-view, scroll, and gesture drivers remain deferred until playback ownership is designed.
+
 ## Accessibility
 
 The default renderer uses a parent accessible label and hides decorative animated token nodes, so screen readers read the phrase once instead of token by token.
@@ -308,6 +323,8 @@ These are intentionally not stable exports in the MVP:
 - stable `overlayText`
 - Skia renderer or Skia-only effects
 - controller playback APIs such as `play`, `pause`, `seek`, `reset`, `reverse`
+- controlled progress via external shared values
+- screen focus, in-view, scroll, or gesture drivers
 - RN-rendered line-to-token mapping
 
 Skia remains an optional future package boundary, not a dependency of this core package.
@@ -327,13 +344,14 @@ Use it today for:
 Wait for a later version if your feature depends on:
 
 - stable playback APIs such as `play`, `pause`, `seek`, `reset`, or `reverse`
+- controlled progress via external shared values
 - scroll progress, gesture progress, or viewport/in-view triggers as first-class drivers
 - exact line-level animation, clipping, masking, or per-token line measurement
 - Skia-only visual effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text, inline links, selectable text, or exact native `Text` behavior
 - long paragraphs or many animated rows without measuring performance in your target app
 
-The next product focus is motion drivers: explicit mount behavior, replay/reset/play controls, and controlled progress via Reanimated shared values. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
+The next product focus is controlled progress ownership: deciding how uncontrolled mount autoplay, externally controlled shared-value progress, and future controls-driven progress should coexist. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
 
 ## Development
 

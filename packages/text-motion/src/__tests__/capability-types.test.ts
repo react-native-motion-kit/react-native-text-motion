@@ -222,9 +222,30 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
     onPress() {},
   };
 
+  const propsWithReplayKey: TextMotionComponentProps = {
+    children: 'Readable title',
+    // @ts-expect-error public replay keys are deferred until playback ownership is designed.
+    replayKey: 1,
+  };
+
+  const propsWithControls: TextMotionComponentProps = {
+    children: 'Readable title',
+    // @ts-expect-error public controls are deferred until playback ownership is designed.
+    controls: {},
+  };
+
+  const propsWithProgress: TextMotionComponentProps = {
+    children: 'Readable title',
+    // @ts-expect-error controlled progress is deferred until playback ownership is designed.
+    progress: {},
+  };
+
   void props;
   void propsWithNumberOfLines;
   void propsWithPressHandler;
+  void propsWithReplayKey;
+  void propsWithControls;
+  void propsWithProgress;
 }
 
 void expectTextMotionComponentsRejectUnsupportedTextProps;

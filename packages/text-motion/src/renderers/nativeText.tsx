@@ -1,4 +1,4 @@
-import { useEffect, type ComponentType, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ComponentType, type ReactNode } from 'react';
 import {
   StyleSheet,
   Text,
@@ -25,7 +25,6 @@ import type {
   TextMotionComponentTextProps,
   TextMotionEffectDescriptorOptions,
   TextMotionInternalRecipeConfig,
-  TextMotionMotionConfig,
 } from '../types/recipe';
 import type { TextMotionRenderer, TextMotionRendererProps } from '../types/renderer';
 import type { TextMotionToken } from '../types/token';
@@ -41,16 +40,16 @@ import {
   createTextMotionRendererHandle,
   readTextMotionTimelineDescriptor,
 } from '../recipe/descriptors';
+import {
+  areNativeTextPlaybackRunsEqual,
+  createNativeTextPlaybackRun,
+  type NativeTextPlaybackRun,
+  type NativeTextStyleState,
+  type NativeTextTokenMotion,
+} from './nativeTextPlayback';
 
 type AnimatedTextProps = TextProps & {
   children?: ReactNode;
-};
-
-type NativeTextStyleState = {
-  opacity: number;
-  scale: number;
-  translateX: number;
-  translateY: number;
 };
 
 type NativeTextStyleStatePair = {
@@ -72,25 +71,18 @@ type EffectStyleStateResolver = (effect: TextMotionAnyEffectDescriptor) => Effec
 
 type NativeTextStyleNumberKey = keyof NativeTextStyleState;
 
-type NativeTextTokenMotion = {
-  delayMs: number;
-  initial: NativeTextStyleState;
-  target: NativeTextStyleState;
-  motion?: TextMotionMotionConfig;
-  pulseScale: number;
-  reducedMotion: 'final-state' | 'system';
-};
-
 type NativeTextProgressAnimationConfig = Pick<
   NativeTextTokenMotion,
   'delayMs' | 'motion' | 'reducedMotion'
 >;
 
 type NativeTextTokenProps = AnimatedTextProps & {
+  playbackText: string;
   tokenMotion?: NativeTextTokenMotion;
 };
 
 type AnimatedNativeTextTokenProps = AnimatedTextProps & {
+  playbackText: string;
   tokenMotion: NativeTextTokenMotion;
 };
 
@@ -417,6 +409,7 @@ function StaticNativeTextToken({ children, style, ...tokenProps }: AnimatedTextP
 
 function AnimatedNativeTextToken({
   children,
+  playbackText,
   style,
   tokenMotion,
   ...tokenProps
@@ -429,13 +422,13 @@ function AnimatedNativeTextToken({
   const targetScale = tokenMotion.target.scale;
   const targetTranslateX = tokenMotion.target.translateX;
   const targetTranslateY = tokenMotion.target.translateY;
-  const delayMs = tokenMotion.delayMs;
-  const motion = tokenMotion.motion;
   const pulseScale = tokenMotion.pulseScale;
   const reducedMotion = tokenMotion.reducedMotion;
   const reducedMotionEnabled = useReducedMotion();
   const renderFinalState = shouldRenderFinalState(reducedMotionEnabled, reducedMotion);
   const progress = useSharedValue(renderFinalState ? 1 : 0);
+  const playbackRun = createNativeTextPlaybackRun(tokenMotion, renderFinalState, playbackText);
+  const previousPlaybackRun = useRef<NativeTextPlaybackRun | undefined>(undefined);
   const animatedStyle = useAnimatedStyle(() => {
     const current = progress.value;
     const clampedCurrent = Math.min(1, Math.max(0, current));
@@ -470,30 +463,21 @@ function AnimatedNativeTextToken({
     targetTranslateY,
   ]);
 
-  useEffect(() => {
-    if (renderFinalState) {
+  useLayoutEffect(() => {
+    if (areNativeTextPlaybackRunsEqual(previousPlaybackRun.current, playbackRun)) {
+      return;
+    }
+
+    previousPlaybackRun.current = playbackRun;
+
+    if (playbackRun.renderFinalState) {
       progress.value = 1;
       return;
     }
 
     progress.value = 0;
-    progress.value = createProgressAnimation({ delayMs, motion, reducedMotion });
-  }, [
-    delayMs,
-    initialOpacity,
-    initialScale,
-    initialTranslateX,
-    initialTranslateY,
-    motion,
-    progress,
-    pulseScale,
-    reducedMotion,
-    renderFinalState,
-    targetOpacity,
-    targetScale,
-    targetTranslateX,
-    targetTranslateY,
-  ]);
+    progress.value = createProgressAnimation(playbackRun);
+  });
 
   return (
     <AnimatedText {...tokenProps} style={[style, animatedStyle] as StyleProp<TextStyle>}>
@@ -502,12 +486,18 @@ function AnimatedNativeTextToken({
   );
 }
 
-function NativeTextToken({ tokenMotion, ...tokenProps }: NativeTextTokenProps) {
+function NativeTextToken({ playbackText, tokenMotion, ...tokenProps }: NativeTextTokenProps) {
   if (!tokenMotion) {
     return <StaticNativeTextToken {...tokenProps} />;
   }
 
-  return <AnimatedNativeTextToken {...tokenProps} tokenMotion={tokenMotion} />;
+  return (
+    <AnimatedNativeTextToken
+      {...tokenProps}
+      playbackText={playbackText}
+      tokenMotion={tokenMotion}
+    />
+  );
 }
 
 function resolveJustifyContent(style: StyleProp<TextStyle>): ViewStyle['justifyContent'] {
@@ -574,7 +564,8 @@ function createNativeTextRendererComponent(
           <NativeTextToken
             {...tokenAccessibilityProps}
             {...tokenTextProps}
-            key={`${token.id}-${token.text}`}
+            key={token.id}
+            playbackText={token.text}
             style={textStyle}
             testID={options.testIDPrefix ? `${options.testIDPrefix}-${token.index}` : undefined}
             tokenMotion={createTokenMotion(

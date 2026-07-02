@@ -9,6 +9,7 @@ import {
   words,
 } from '@react-native-motion-kit/text-motion';
 import { render, screen } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 
 import type { TextMotionInternalRecipeConfig, TextMotionToken } from '../types';
 
@@ -39,6 +40,7 @@ const STATIC_TO_ANIMATED_MOTION_TOKEN: TextMotionToken<'custom'> = {
   text: 'Motion',
   unit: 'custom',
 };
+const STABLE_EASING = (value: number) => value;
 
 function createDynamicFadeRecipe(from: number): TextMotionInternalRecipeConfig {
   return {
@@ -47,12 +49,41 @@ function createDynamicFadeRecipe(from: number): TextMotionInternalRecipeConfig {
   };
 }
 
+function createTimedFadeRecipe(
+  motion: NonNullable<TextMotionInternalRecipeConfig['motion']>,
+): TextMotionInternalRecipeConfig {
+  return {
+    effects: [fade()],
+    motion,
+  };
+}
+
+function createTimelineFadeRecipe(
+  timeline: NonNullable<TextMotionInternalRecipeConfig['timeline']>,
+): TextMotionInternalRecipeConfig {
+  return {
+    effects: [fade()],
+    motion: { kind: 'timing', options: { duration: 400 } },
+    timeline,
+  };
+}
+
+function createFinalStateFadeRecipe(from: number): TextMotionInternalRecipeConfig {
+  return {
+    accessibility: parentLabelPolicy({ reducedMotion: 'final-state' }),
+    effects: [fade({ from })],
+    motion: { kind: 'timing', options: { duration: 400 } },
+  };
+}
+
 describe('nativeText', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.mocked(Reanimated.useReducedMotion).mockReturnValue(false);
   });
 
   afterEach(() => {
+    jest.mocked(Reanimated.useReducedMotion).mockReset();
     jest.useRealTimers();
   });
 
@@ -290,6 +321,192 @@ describe('nativeText', () => {
     jest.advanceTimersByTime(200);
 
     expect(updatedFirstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('restarts with the new timeline delay when the timeline changes', async () => {
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const view = await render(
+      <Renderer recipe={createTimelineFadeRecipe(stagger(0))} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+    const secondWord = getHiddenToken('word-2');
+
+    jest.advanceTimersByTime(400);
+
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer recipe={createTimelineFadeRecipe(stagger(0.2))} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(600);
+
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('restarts with the new motion config when motion changes', async () => {
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const view = await render(
+      <Renderer
+        recipe={createTimedFadeRecipe({ kind: 'timing', options: { duration: 400 } })}
+        tokens={DYNAMIC_FADE_TOKENS}
+      >
+        Hello motion
+      </Renderer>,
+    );
+    const firstWord = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer
+        recipe={createTimedFadeRecipe({ kind: 'timing', options: { duration: 800 } })}
+        tokens={DYNAMIC_FADE_TOKENS}
+      >
+        Hello motion
+      </Renderer>,
+    );
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps progress when equal nested spring options are cloned', async () => {
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const createSpringRecipe = () =>
+      createTimedFadeRecipe({
+        kind: 'spring',
+        options: { clamp: { max: 1, min: 0 }, dampingRatio: 1, duration: 400 },
+      });
+    const view = await render(
+      <Renderer recipe={createSpringRecipe()} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+    const firstWord = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).not.toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer recipe={createSpringRecipe()} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+
+    expect(firstWord).not.toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps progress when function-valued timing options keep the same reference', async () => {
+    const createTimingRecipe = () =>
+      createTimedFadeRecipe({ kind: 'timing', options: { duration: 400, easing: STABLE_EASING } });
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const view = await render(
+      <Renderer recipe={createTimingRecipe()} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+    const firstWord = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer recipe={createTimingRecipe()} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps final-state reduced motion final when replaying inputs change', async () => {
+    jest.mocked(Reanimated.useReducedMotion).mockReturnValue(true);
+
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const view = await render(
+      <Renderer recipe={createFinalStateFadeRecipe(0)} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+    const firstWord = getHiddenToken('word-0');
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer recipe={createFinalStateFadeRecipe(0.5)} tokens={DYNAMIC_FADE_TOKENS}>
+        Hello motion
+      </Renderer>,
+    );
+
+    expect(firstWord).toHaveAnimatedStyle({
       opacity: 1,
       transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
     });

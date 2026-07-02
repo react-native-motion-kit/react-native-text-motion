@@ -38,7 +38,11 @@
   },
   "overrides": [
     {
-      "files": ["packages/**/src/__tests__/*.test.tsx", "packages/**/src/__tests__/*.test.ts"],
+      "files": [
+        "packages/**/jest-setup.js",
+        "packages/**/src/__tests__/*.test.tsx",
+        "packages/**/src/__tests__/*.test.ts"
+      ],
       "plugins": ["jest"],
       "env": {
         "jest": true

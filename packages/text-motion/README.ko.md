@@ -92,6 +92,8 @@ export function Header() {
 
 `timing` options는 Reanimated `withTiming` config를 따르고, `spring` options는 Reanimated `withSpring` config를 따릅니다. `reduceMotion`은 여기서 받지 않습니다. text-motion에서는 reduced-motion 동작을 accessibility policy에서 제어합니다.
 
+Custom `easing`처럼 function-valued option은 animation을 유지할지 다시 실행할지 판단할 때 reference로 비교합니다. Parent rerender에서도 progress를 유지하려면 같은 function reference를 재사용하거나 hoist하세요. 새 function을 만들면 motion config가 바뀐 것으로 보고 replay됩니다.
+
 ## Presets
 
 Preset은 string 이름이 아니라 조합 가능한 recipe factory입니다.
@@ -261,6 +263,19 @@ const TestableReveal = defineTextMotion()
   .component();
 ```
 
+## Playback Lifecycle
+
+Stable MVP의 playback은 자동 lifecycle 기반입니다. 아직 수동 playback control API를 제공하지 않습니다.
+
+- 처음 mount되면 animated visible token은 initial style에서 target style로 자동 실행됩니다.
+- 같은 text와 같은 recipe로 parent rerender가 일어나면 진행 중인 progress를 유지합니다.
+- text가 바뀌면 token shape가 같아도 해당 token animation은 다시 실행됩니다.
+- effect, timeline, motion config가 바뀌면 affected animated token은 reset되고 변경된 입력으로 다시 autoplay됩니다.
+- whitespace/static token은 layout text를 보존하지만 animation하지 않고 motion index를 소비하지 않습니다.
+- `parentLabelPolicy({ reducedMotion: 'final-state' })`는 reduced-motion 사용자에게 initial animated state를 깜빡이지 않고 final style을 유지합니다.
+
+Example app은 animation을 반복 확인하기 쉽도록 demo player를 remount할 수 있습니다. 이건 demo UI 동작이지, 앱에서 권장하는 public API 패턴은 아닙니다. Stable `play`, `pause`, `seek`, `reset`, `reverse`, controlled `progress`, screen focus, in-view, scroll, gesture driver는 playback ownership을 설계할 때까지 deferred입니다.
+
 ## 접근성
 
 기본 renderer는 parent accessible label을 만들고 animated token node를 장식용으로 숨깁니다. 그래서 screen reader는 token 하나씩이 아니라 문장을 한 번만 읽습니다.
@@ -308,6 +323,8 @@ Custom effect factory와 renderer capability factory는 MVP root API에서 의�
 - stable `overlayText`
 - Skia renderer 또는 Skia-only effects
 - `play`, `pause`, `seek`, `reset`, `reverse` 같은 controller playback API
+- external shared value 기반 controlled progress
+- screen focus, in-view, scroll, gesture driver
 - RN-rendered line-to-token mapping
 
 Skia는 core package의 dependency가 아니라 future optional package boundary로 남겨둡니다.
@@ -327,13 +344,14 @@ Skia는 core package의 dependency가 아니라 future optional package boundary
 다음 기능이 핵심이라면 이후 버전을 기다리는 편이 좋습니다.
 
 - `play`, `pause`, `seek`, `reset`, `reverse` 같은 stable playback API
+- external shared value 기반 controlled progress
 - scroll progress, gesture progress, viewport/in-view trigger를 first-class driver로 쓰는 기능
 - 정확한 line-level animation, clipping, masking, token별 line measurement
 - blur, glow, shader, mask, glyph distortion 같은 Skia-only visual effect
 - rich nested text, inline link, selectable text, native `Text`와 완전히 같은 동작
 - target app에서 성능 측정 없이 긴 문단이나 많은 animated row에 적용하는 경우
 
-다음 제품 초점은 motion driver입니다. mount 동작을 명시적으로 정리하고, replay/reset/play control과 Reanimated shared value 기반 controlled progress를 다룹니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
+다음 제품 초점은 controlled progress ownership입니다. uncontrolled mount autoplay, external shared value 기반 controlled progress, future controls-driven progress가 어떻게 공존해야 하는지 먼저 정리해야 합니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
 
 ## 개발
 
