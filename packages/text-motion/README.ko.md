@@ -94,6 +94,8 @@ export function Header() {
 
 Custom `easing`처럼 function-valued option은 animation을 유지할지 다시 실행할지 판단할 때 reference로 비교합니다. Parent rerender에서도 progress를 유지하려면 같은 function reference를 재사용하거나 hoist하세요. 새 function을 만들면 motion config가 바뀐 것으로 보고 replay됩니다.
 
+`.motion()`은 uncontrolled autoplay만 설정합니다. Component에 `progress`를 넘기면 shared value는 앱에서 직접 Reanimated `withTiming`, `withSpring`, scroll, gesture, focus logic으로 움직여야 합니다.
+
 ## Presets
 
 Preset은 string 이름이 아니라 조합 가능한 recipe factory입니다.
@@ -249,6 +251,7 @@ Built-in effect의 숫자 입력은 finite number여야 합니다. `rise({ y })`
 - `nativeID`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `progress`
 - `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, `onAccessibilityAction`
 
 단일 native text node가 필요한 layout/interaction prop은 stable MVP 계약에 포함되지 않습니다. 예: `numberOfLines`, `ellipsizeMode`, `lineBreakMode`, `onTextLayout`, `selectable`, text `onPress`.
@@ -265,7 +268,7 @@ const TestableReveal = defineTextMotion()
 
 ## Playback Lifecycle
 
-Stable MVP의 playback은 자동 lifecycle 기반입니다. 아직 수동 playback control API를 제공하지 않습니다.
+기본 playback은 자동 lifecycle 기반입니다.
 
 - 처음 mount되면 animated visible token은 initial style에서 target style로 자동 실행됩니다.
 - 같은 text와 같은 recipe로 parent rerender가 일어나면 진행 중인 progress를 유지합니다.
@@ -274,7 +277,84 @@ Stable MVP의 playback은 자동 lifecycle 기반입니다. 아직 수동 playba
 - whitespace/static token은 layout text를 보존하지만 animation하지 않고 motion index를 소비하지 않습니다.
 - `parentLabelPolicy({ reducedMotion: 'final-state' })`는 reduced-motion 사용자에게 initial animated state를 깜빡이지 않고 final style을 유지합니다.
 
-Example app은 animation을 반복 확인하기 쉽도록 demo player를 remount할 수 있습니다. 이건 demo UI 동작이지, 앱에서 권장하는 public API 패턴은 아닙니다. Stable `play`, `pause`, `seek`, `reset`, `reverse`, controlled `progress`, screen focus, in-view, scroll, gesture driver는 playback ownership을 설계할 때까지 deferred입니다.
+Example app은 animation을 반복 확인하기 쉽도록 demo player를 remount할 수 있습니다. 이건 demo UI 동작이지, 앱에서 권장하는 public API 패턴은 아닙니다.
+
+### Controlled Progress
+
+Text motion이 앱이 이미 제어하고 있는 상태를 따라가야 한다면 `progress`를 사용하세요.
+
+자주 쓰이는 예시는 이런 경우입니다.
+
+- 버튼을 누른 뒤 headline이 reveal되어야 할 때
+- onboarding copy가 현재 step에 맞춰 진행되어야 할 때
+- screen focus를 받을 때 title을 다시 보여주고 싶을 때
+- scroll 또는 gesture shared value에 맞춰 text가 따라와야 할 때
+- form field가 valid가 된 뒤 label이 나타나야 할 때
+- 여러 UI 요소가 같은 shared progress value를 기준으로 함께 움직여야 할 때
+
+이런 경우에는 text component가 언제 시작할지 결정하면 애매해집니다. 이미 앱이 적절한 순간을 알고 있으므로, 앱이 Reanimated shared value를 소유하고 text component에는 그 값을 넘깁니다.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
+
+const ControlledReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.08))
+  .effect(rise({ y: 12 }).and(fade()))
+  .component();
+
+export function Headline() {
+  const progress = useSharedValue(0);
+
+  return (
+    <>
+      <ControlledReveal progress={progress}>
+        Progress drives the whole reveal
+      </ControlledReveal>
+
+      <Button
+        title="Play"
+        onPress={() => {
+          progress.value = withTiming(1, { duration: 720 });
+        }}
+      />
+    </>
+  );
+}
+```
+
+`progress`는 전체 text motion의 normalized progress입니다.
+
+- `0`은 initial token style을 렌더링합니다.
+- `1`은 모든 animated token을 final style로 렌더링합니다.
+- `0..1` 밖의 값은 clamp됩니다.
+- finite number가 아닌 값은 `0`처럼 처리합니다.
+
+`progress`는 단어 하나의 progress가 아니라 문장 전체의 progress라고 보면 됩니다. 예를 들어 `stagger(0.08)`을 쓰면 첫 번째 단어는 이미 끝났는데 뒤쪽 단어는 아직 따라오는 중일 수 있습니다. Renderer는 global shared value를 visible token별 local progress로 바꾸기 때문에 `stagger()`, `wave()`, `sequence()`, `parallel()`의 timing shape가 controlled mode에서도 유지됩니다. 공백은 계속 렌더링되지만 motion index를 소비하지 않습니다.
+
+`progress`가 있으면 component는 controlled mode가 되고 `.motion()`은 내부 autoplay를 시작하지 않습니다. Playback curve는 shared value를 업데이트하는 곳에서 정합니다.
+
+```tsx
+progress.value = withTiming(1, { duration: 720 });
+progress.value = withSpring(1);
+progress.value = 0;
+```
+
+이 rendered component에 `progress`를 넘기면 해당 instance에서는 `.motion()`이 적용되지 않습니다. 같은 recipe를 progress 없이 autoplay하는 uncontrolled version으로도 쓸 때만 `.motion()`을 추가하세요.
+
+중요한 제한도 있습니다. Controlled mode는 현재 whole-text progress mapping 안에서 fixed token timeline span `1.0`을 사용합니다. 실제로는 timeline delay가 각 token이 언제 시작할지 만들고, `withTiming` 또는 `withSpring`이 전체 문장이 `0`에서 `1`까지 얼마나 빠르게 움직일지를 정합니다. 나중에 controlled mode에서 token별 span 또는 duration 제어가 필요해진다면 `.motion()` duration을 몰래 빌려오는 방식이 아니라 별도 API로 설계하는 편이 안전합니다.
+
+Stable `play`, `pause`, `seek`, `reset`, `reverse`, screen focus, in-view, scroll, gesture driver는 아직 deferred입니다. 지금은 shared value를 직접 움직이면 됩니다.
 
 ## 접근성
 
@@ -305,6 +385,7 @@ React Native/Hermes 환경에서는 `Intl.Segmenter`가 항상 보장되지 않�
 - `nativeText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
 - `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`
+- external Reanimated shared value 기반 controlled `progress`
 - hidden animated token node를 사용하는 parent-label accessibility policy
 - `/presets` subpath recipe factories
 
@@ -323,8 +404,7 @@ Custom effect factory와 renderer capability factory는 MVP root API에서 의�
 - stable `overlayText`
 - Skia renderer 또는 Skia-only effects
 - `play`, `pause`, `seek`, `reset`, `reverse` 같은 controller playback API
-- external shared value 기반 controlled progress
-- screen focus, in-view, scroll, gesture driver
+- first-class screen focus, in-view, scroll, gesture driver
 - RN-rendered line-to-token mapping
 
 Skia는 core package의 dependency가 아니라 future optional package boundary로 남겨둡니다.
@@ -338,20 +418,20 @@ Skia는 core package의 dependency가 아니라 future optional package boundary
 - hero title, section title, 짧은 label, onboarding copy, product description
 - `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`를 조합한 word/grapheme entrance motion
 - preset이나 `defineTextMotion()`으로 재사용 가능한 recipe component를 만들고 싶은 경우
+- external Reanimated shared value로 text motion progress를 직접 제어해야 하는 경우
 - 이미 Reanimated 4를 사용하고 Worklets 설정을 따를 수 있는 앱
 - 전체 문장은 한 번만 읽히고, animated token은 장식처럼 처리되어야 하는 accessible text motion
 
 다음 기능이 핵심이라면 이후 버전을 기다리는 편이 좋습니다.
 
 - `play`, `pause`, `seek`, `reset`, `reverse` 같은 stable playback API
-- external shared value 기반 controlled progress
 - scroll progress, gesture progress, viewport/in-view trigger를 first-class driver로 쓰는 기능
 - 정확한 line-level animation, clipping, masking, token별 line measurement
 - blur, glow, shader, mask, glyph distortion 같은 Skia-only visual effect
 - rich nested text, inline link, selectable text, native `Text`와 완전히 같은 동작
 - target app에서 성능 측정 없이 긴 문단이나 많은 animated row에 적용하는 경우
 
-다음 제품 초점은 controlled progress ownership입니다. uncontrolled mount autoplay, external shared value 기반 controlled progress, future controls-driven progress가 어떻게 공존해야 하는지 먼저 정리해야 합니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
+다음 제품 초점은 playback control과 driver입니다. Controlled shared-value progress 위에 `play`, `pause`, `reset`, screen focus, in-view, scroll, gesture helper를 stable API로 올릴 가치가 있는지 판단해야 합니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
 
 ## 개발
 

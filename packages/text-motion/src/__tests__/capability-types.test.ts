@@ -1,3 +1,5 @@
+import type { SharedValue } from 'react-native-reanimated';
+
 import {
   defineTextMotion,
   fade,
@@ -23,6 +25,7 @@ describe('renderer capability types', () => {
 
 declare const publicApi: typeof import('@react-native-motion-kit/text-motion');
 declare const publicRendererProps: TextMotionRendererProps;
+declare const componentProgress: SharedValue<number>;
 
 function expectExtensionFactoriesStayInternal() {
   // @ts-expect-error custom effect factories are intentionally not root public API in the MVP.
@@ -210,6 +213,11 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
     testID: 'readable-title',
   };
 
+  const propsWithProgress: TextMotionComponentProps = {
+    children: 'Readable title',
+    progress: componentProgress,
+  };
+
   const propsWithNumberOfLines: TextMotionComponentProps = {
     children: 'Readable title',
     // @ts-expect-error nativeText does not support ellipsis layout as a Text drop-in.
@@ -234,18 +242,26 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
     controls: {},
   };
 
-  const propsWithProgress: TextMotionComponentProps = {
+  const propsWithAutoplay: TextMotionComponentProps = {
     children: 'Readable title',
-    // @ts-expect-error controlled progress is deferred until playback ownership is designed.
-    progress: {},
+    // @ts-expect-error autoplay prop is deferred until playback ownership needs it.
+    autoplay: false,
+  };
+
+  const propsWithDriver: TextMotionComponentProps = {
+    children: 'Readable title',
+    // @ts-expect-error public drivers are deferred until controlled progress is proven.
+    driver: {},
   };
 
   void props;
+  void propsWithProgress;
   void propsWithNumberOfLines;
   void propsWithPressHandler;
   void propsWithReplayKey;
   void propsWithControls;
-  void propsWithProgress;
+  void propsWithAutoplay;
+  void propsWithDriver;
 }
 
 void expectTextMotionComponentsRejectUnsupportedTextProps;

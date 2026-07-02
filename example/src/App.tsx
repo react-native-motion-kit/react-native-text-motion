@@ -25,8 +25,9 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 
-type DemoGroupId = 'presets' | 'splitters' | 'effects' | 'timelines';
+type DemoGroupId = 'presets' | 'splitters' | 'effects' | 'timelines' | 'playback';
 
 type DemoGroup = {
   id: DemoGroupId;
@@ -34,7 +35,7 @@ type DemoGroup = {
 };
 
 type Demo = {
-  Component: TextMotionComponent;
+  Component?: TextMotionComponent;
   caption: string;
   groupId: DemoGroupId;
   id: string;
@@ -160,11 +161,19 @@ const SpringMotion = defineTextMotion()
   .motion({ kind: 'spring', options: { damping: 14, stiffness: 160 } })
   .component();
 
+const ControlledProgressText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.08))
+  .effect(rise({ y: 12 }).and(fade()))
+  .component();
+
 const demoGroups: readonly DemoGroup[] = [
   { id: 'presets', title: 'Presets' },
   { id: 'splitters', title: 'Splitters' },
   { id: 'effects', title: 'Effects' },
   { id: 'timelines', title: 'Timelines' },
+  { id: 'playback', title: 'Playback' },
 ];
 
 const demos: readonly Demo[] = [
@@ -312,6 +321,13 @@ const demos: readonly Demo[] = [
     text: 'Spring motion gives words weight',
     title: 'Spring Motion',
   },
+  {
+    caption: 'progress={sharedValue}',
+    groupId: 'playback',
+    id: 'controlled-progress',
+    text: 'Progress drives the whole reveal',
+    title: 'Controlled Progress',
+  },
 ];
 
 function firstDemoIndexForGroup(groupId: DemoGroupId): number {
@@ -326,11 +342,54 @@ function nextDemoIndex(index: number): number {
   return (index + 1) % demos.length;
 }
 
+function ControlledProgressDemo({ text }: { text: string }) {
+  const progress = useSharedValue(0);
+
+  return (
+    <View style={styles.controlledDemo}>
+      <ControlledProgressText progress={progress} style={styles.motionText}>
+        {text}
+      </ControlledProgressText>
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            progress.value = 0;
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Reset</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            progress.value = withTiming(0.5, { duration: 320 });
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Half</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            progress.value = withTiming(1, { duration: 720 });
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Play</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function App() {
   const [demoIndex, setDemoIndex] = useState(0);
   const [replayKey, setReplayKey] = useState(0);
   const demo = demos[demoIndex] ?? demos[0];
   const MotionText = demo.Component;
+  const controlledDemoSelected = demo.id === 'controlled-progress';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -378,12 +437,18 @@ export default function App() {
           </View>
 
           <View style={styles.motionFrame}>
-            <MotionText
-              key={`${demo.id}-${replayKey}`}
-              style={[styles.motionText, demo.id === 'editorial-rise' && styles.heroTitle]}
-            >
-              {demo.text}
-            </MotionText>
+            {controlledDemoSelected ? (
+              <ControlledProgressDemo key={demo.id} text={demo.text} />
+            ) : (
+              MotionText && (
+                <MotionText
+                  key={`${demo.id}-${replayKey}`}
+                  style={[styles.motionText, demo.id === 'editorial-rise' && styles.heroTitle]}
+                >
+                  {demo.text}
+                </MotionText>
+              )
+            )}
           </View>
         </View>
 
@@ -433,6 +498,11 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row',
     gap: 10,
+  },
+  controlledDemo: {
+    alignItems: 'center',
+    gap: 18,
+    width: '100%',
   },
   counter: {
     color: '#64748b',
@@ -501,6 +571,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 20,
+  },
+  progressButton: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#94a3b8',
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+  },
+  progressButtonText: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  progressControls: {
+    flexDirection: 'row',
+    gap: 8,
+    maxWidth: 360,
+    width: '100%',
   },
   screen: {
     backgroundColor: '#eef3f8',

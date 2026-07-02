@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { StyleProp, TextProps, TextStyle } from 'react-native';
-import type { WithSpringConfig, WithTimingConfig } from 'react-native-reanimated';
+import type { SharedValue, WithSpringConfig, WithTimingConfig } from 'react-native-reanimated';
 
 import type {
   TextMotionCompatibleEffect,
@@ -145,8 +145,25 @@ export type TextMotionComponentTextProps = TextMotionComponentAccessibilityProps
     style?: StyleProp<TextStyle>;
   };
 
+type TextMotionComponentPlaybackProps = {
+  /**
+   * External normalized progress for controlled playback.
+   *
+   * `0` renders the initial text motion state and `1` renders the final state. Finite values
+   * outside `0..1` are clamped by the renderer; non-finite values are treated as `0`. When
+   * provided, the component is controlled: `.motion()` no longer starts internal autoplay, and
+   * callers should drive this shared value with Reanimated timing, spring, scroll, gesture, or
+   * focus logic.
+   */
+  progress?: SharedValue<number>;
+};
+
+/** Props forwarded from a text motion component to its renderer. */
+export type TextMotionComponentRendererProps = TextMotionComponentTextProps &
+  TextMotionComponentPlaybackProps;
+
 /** Props accepted by components created from text motion recipes. */
-export type TextMotionComponentProps = TextMotionComponentTextProps & {
+export type TextMotionComponentProps = TextMotionComponentRendererProps & {
   /** Plain string rendered and split by the recipe splitter. */
   children: string;
 };

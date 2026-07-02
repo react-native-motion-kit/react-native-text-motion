@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 
-import type { TextMotionComponentTextProps, TextMotionRecipeConfig } from './recipe';
+import type { TextMotionComponentRendererProps, TextMotionRecipeConfig } from './recipe';
 import type { TextMotionToken } from './token';
 
 declare const textMotionRendererCapabilityBrand: unique symbol;
@@ -26,7 +26,7 @@ export type TextMotionRendererProps<Recipe = TextMotionRecipeConfig> = {
   children: ReactNode;
   tokens: readonly TextMotionToken[];
   recipe: Recipe;
-  textProps?: TextMotionComponentTextProps;
+  textProps?: TextMotionComponentRendererProps;
 };
 
 /** @internal Renderer descriptor consumed by recipe internals. */

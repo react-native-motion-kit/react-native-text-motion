@@ -22,11 +22,13 @@ const OTHER_EASING = (value: number) => value;
 
 function createTokenMotion(overrides: Partial<NativeTextTokenMotion> = {}): NativeTextTokenMotion {
   return {
+    delaySeconds: 0,
     delayMs: 0,
     initial: BASE_STYLE_STATE,
     pulseScale: 1,
     reducedMotion: 'system',
     target: BASE_STYLE_STATE,
+    totalDurationSeconds: 1,
     ...overrides,
   };
 }
@@ -167,5 +169,24 @@ describe('nativeTextPlayback', () => {
 
     expect(areNativeTextPlaybackRunsEqual(base, sameReference)).toBe(true);
     expect(areNativeTextPlaybackRunsEqual(base, differentReference)).toBe(false);
+  });
+
+  it('ignores controlled-progress-only timing fields for autoplay replay comparison', () => {
+    const base = createPlaybackRun({
+      tokenMotion: createTokenMotion({
+        delayMs: 80,
+        delaySeconds: 0.08,
+        totalDurationSeconds: 1.24,
+      }),
+    });
+    const sameAutoplayRun = createPlaybackRun({
+      tokenMotion: createTokenMotion({
+        delayMs: 80,
+        delaySeconds: 0.0804,
+        totalDurationSeconds: 2,
+      }),
+    });
+
+    expect(areNativeTextPlaybackRunsEqual(base, sameAutoplayRun)).toBe(true);
   });
 });

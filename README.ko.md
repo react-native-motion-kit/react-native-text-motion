@@ -52,6 +52,39 @@ const WordReveal = defineTextMotion()
   .component();
 ```
 
+Controlled progress는 text motion이 component 내부 autoplay가 아니라 외부 상태를 따라가야 할 때 유용합니다. 예를 들어 button 클릭, onboarding step, screen focus, scroll position, gesture progress에 맞춰 문장이 나타나야 한다면 앱이 Reanimated shared value를 소유하고 text component는 현재 상태만 렌더링합니다.
+
+기본 controlled progress 예시:
+
+```tsx
+import { Button } from 'react-native';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
+
+const ControlledReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.08))
+  .effect(fade().and(rise({ y: 12 })))
+  .component();
+
+export function Headline() {
+  const progress = useSharedValue(0);
+
+  return (
+    <>
+      <ControlledReveal progress={progress}>
+        Progress drives the whole reveal
+      </ControlledReveal>
+      <Button title="Play" onPress={() => (progress.value = withTiming(1))} />
+    </>
+  );
+}
+```
+
+`progress`는 전체 text motion에 대한 normalized progress입니다. `0`은 initial state, `1`은 final state입니다. Timeline delay는 이 global value를 각 token의 local progress로 변환하므로 `stagger()`나 `wave()`의 timing shape가 유지됩니다. 그래서 headline이 card scroll 위치에 맞춰 reveal되거나, form step이 valid가 된 뒤 label이 나타나거나, screen focus 때 text를 remount 없이 다시 보여주는 케이스에 쓸 수 있습니다.
+
+`progress`가 제공되면 `.motion()`은 내부 autoplay를 실행하지 않습니다. 대신 shared value를 업데이트하는 곳에서 playback 느낌을 정하면 됩니다. 예를 들어 `progress.value = withTiming(1, { duration: 720 })` 또는 `progress.value = withSpring(1)`처럼 직접 움직입니다. `play`, `pause`, `reset` 같은 controller API와 first-class scroll/gesture driver는 아직 deferred입니다.
+
 ## Stable MVP Scope
 
 - recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
@@ -60,9 +93,12 @@ const WordReveal = defineTextMotion()
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
 - effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
+- external Reanimated shared value 기반 controlled progress
 - accessibility default: parent label plus hidden decorative token nodes
 
 `nativeText()`는 transform-first token renderer입니다. React Native에서 transform effect가 실제로 보이도록 wrapping `View`와 animated `Text` token을 사용합니다. React Native `Text`의 완전한 drop-in 대체품은 아니며, `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
+
+기본 playback은 lifecycle 기반입니다. mount되면 animated token이 자동 실행되고, 같은 text/recipe로 parent rerender가 일어나면 진행 중인 progress를 유지하며, text/effect/timeline/motion이 바뀌면 affected token animation을 다시 실행합니다. Component에 `progress`를 넘기면 외부 Reanimated `SharedValue<number>`가 `0`에서 `1`까지 전체 text motion을 제어합니다. 이 controlled mode에서는 `.motion()`이 내부 autoplay를 실행하지 않으므로, shared value는 앱에서 직접 `withTiming`, `withSpring`, scroll, gesture, focus logic으로 움직이면 됩니다.
 
 Skia, stable line reveal, controller playback, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다.
 
@@ -106,18 +142,19 @@ corepack pnpm run example:build
 - Reanimated 기반 word-level 또는 grapheme-level reveal effect가 필요할 때
 - 일회성 animation prop보다 재사용 가능한 motion recipe를 만들고 싶을 때
 - screen reader가 split token을 하나씩 읽지 않고 문장을 한 번만 읽어야 할 때
+- button, scroll, gesture, focus 상태에 맞춰 text motion progress를 직접 제어하고 싶을 때
 - Skia를 필수 dependency로 넣지 않는 가벼운 core package가 필요할 때
 
 다음이 필요하다면 이후 버전을 기다리는 편이 좋습니다.
 
 - `play`, `pause`, `seek`, `reset`, `reverse` 같은 stable playback control
-- scroll-driven, gesture-driven, in-view text motion
+- first-class scroll, gesture, in-view driver
 - 정확한 line reveal, masked reveal, token-to-line mapping
 - blur, glow, shader, mask, glyph distortion 같은 Skia effect
 - link, selectable text, rich nested text, 완전한 native `Text` layout parity
 - 긴 문장, virtualized list, dense UI에서 자체 성능 검증 없이 많이 쓰는 경우
 
-다음 초점은 motion driver와 playback control입니다. 먼저 replay/reset/play 동작을 명시적으로 만들고, 이후 Reanimated shared value 기반 controlled progress를 지원하는 방향입니다. line-aware effect와 optional Skia renderer는 native renderer, layout 동작, 성능 기준이 더 검증된 뒤 다룹니다.
+다음 초점은 playback control과 driver입니다. Controlled shared-value progress는 이제 low-level primitive이고, 이후에는 그 위에 `play`, `pause`, `reset`, in-view, scroll, gesture helper를 stable API로 올릴 가치가 있는지 판단해야 합니다. line-aware effect와 optional Skia renderer는 native renderer, layout 동작, 성능 기준이 더 검증된 뒤 다룹니다.
 
 ## License
 

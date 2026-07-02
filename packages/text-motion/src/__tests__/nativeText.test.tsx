@@ -8,7 +8,8 @@ import {
   stagger,
   words,
 } from '@react-native-motion-kit/text-motion';
-import { render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Pressable } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
 import type { TextMotionInternalRecipeConfig, TextMotionToken } from '../types';
@@ -41,6 +42,29 @@ const STATIC_TO_ANIMATED_MOTION_TOKEN: TextMotionToken<'custom'> = {
   unit: 'custom',
 };
 const STABLE_EASING = (value: number) => value;
+const ControlledProgressInteractionReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText({ testIDPrefix: 'word' }))
+  .effect(fade().and(rise({ y: 10 })))
+  .component();
+
+function ControlledProgressInteractionHarness() {
+  const progress = Reanimated.useSharedValue(0);
+
+  return (
+    <>
+      <ControlledProgressInteractionReveal progress={progress}>
+        Hello motion
+      </ControlledProgressInteractionReveal>
+      <Pressable
+        testID="advance-progress"
+        onPress={() => {
+          progress.value = 1;
+        }}
+      />
+    </>
+  );
+}
 
 function createDynamicFadeRecipe(from: number): TextMotionInternalRecipeConfig {
   return {
@@ -507,6 +531,175 @@ describe('nativeText', () => {
     );
 
     expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('uses external progress without starting internal autoplay', async () => {
+    const progress = Reanimated.makeMutable(0);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 100 } })
+      .component();
+
+    await render(<Reveal progress={progress}>Hello motion</Reveal>);
+    const firstWord = getHiddenToken('word-0');
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('updates token styles when external progress changes after an interaction', async () => {
+    await render(<ControlledProgressInteractionHarness />);
+    const firstWord = getHiddenToken('word-0');
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 10 }, { scale: 1 }],
+    });
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('advance-progress'));
+      await jest.advanceTimersByTimeAsync(1);
+    });
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('maps whole-text controlled progress to token-local progress with timeline delays', async () => {
+    const progress = Reanimated.makeMutable(0.5);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .timeline(stagger(0.5))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal progress={progress}>One two three</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(getHiddenToken('word-2')).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(getHiddenToken('word-4')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps external progress when controlled inputs change', async () => {
+    const progress = Reanimated.makeMutable(0.5);
+    const Renderer = readTextMotionRendererDescriptor(
+      nativeText({ testIDPrefix: 'word' }),
+    ).Component;
+    const view = await render(
+      <Renderer
+        recipe={createTimelineFadeRecipe(stagger(0))}
+        textProps={{ progress }}
+        tokens={DYNAMIC_FADE_TOKENS}
+      >
+        Hello motion
+      </Renderer>,
+    );
+    const firstWord = getHiddenToken('word-0');
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await view.rerender(
+      <Renderer
+        recipe={createDynamicFadeRecipe(0.25)}
+        textProps={{ progress }}
+        tokens={DYNAMIC_FADE_TOKENS}
+      >
+        Hello motion
+      </Renderer>,
+    );
+
+    expect(progress.value).toBe(0.5);
+    expect(getHiddenToken('word-0')).toHaveTextContent('Hello');
+  });
+
+  it('clamps negative controlled progress to the initial state', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal progress={Reanimated.makeMutable(-1)}>Hello</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('clamps overflowing controlled progress to the final state', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal progress={Reanimated.makeMutable(2)}>Hello</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('treats non-finite controlled progress as the initial state', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal progress={Reanimated.makeMutable(Number.NaN)}>Hello</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps final-state reduced motion final when progress is controlled', async () => {
+    jest.mocked(Reanimated.useReducedMotion).mockReturnValue(true);
+
+    const progress = Reanimated.makeMutable(0);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+      .component();
+
+    await render(<Reveal progress={progress}>Hello motion</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
       opacity: 1,
       transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
     });
