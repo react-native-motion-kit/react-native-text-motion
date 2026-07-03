@@ -8,14 +8,12 @@ export type NativeTextStyleState = {
 };
 
 export type NativeTextTokenMotion = {
-  delaySeconds: number;
   delayMs: number;
   initial: NativeTextStyleState;
   target: NativeTextStyleState;
   motion?: TextMotionMotionConfig;
   pulseScale: number;
   reducedMotion: 'final-state' | 'system';
-  totalTimelineSpan: number;
 };
 
 type NativeTextMotionOptionSnapshotValue =

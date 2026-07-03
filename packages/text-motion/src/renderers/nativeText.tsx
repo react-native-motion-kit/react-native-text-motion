@@ -52,6 +52,7 @@ import {
   clampNativeTextProgress,
   createNativeTextControlledTimelineSpan,
   mapNativeTextControlledProgressToTokenProgress,
+  type NativeTextControlledProgressPlan,
 } from './nativeTextProgress';
 
 type AnimatedTextProps = TextProps & {
@@ -82,21 +83,44 @@ type NativeTextProgressAnimationConfig = Pick<
   'delayMs' | 'motion' | 'reducedMotion'
 >;
 
-type NativeTextTokenProps = AnimatedTextProps & {
-  controlledProgress?: SharedValue<number>;
-  playbackText: string;
-  tokenMotion?: NativeTextTokenMotion;
+type StaticNativeTextTokenProps = AnimatedTextProps & {
+  tokenMotion?: undefined;
 };
 
-type NativeTextAnimatedStyleOptions = {
-  controlled: boolean;
-  progress: SharedValue<number>;
-  renderFinalState: boolean;
+type ControlledNativeTextTokenProps = AnimatedTextProps & {
+  controlledProgress: SharedValue<number>;
+  controlledProgressPlan: NativeTextControlledProgressPlan;
   tokenMotion: NativeTextTokenMotion;
 };
 
+type UncontrolledNativeTextTokenProps = AnimatedTextProps & {
+  playbackText: string;
+  tokenMotion: NativeTextTokenMotion;
+};
+
+type NativeTextTokenProps =
+  | StaticNativeTextTokenProps
+  | ControlledNativeTextTokenProps
+  | UncontrolledNativeTextTokenProps;
+
+type NativeTextAnimatedStyleOptions =
+  | {
+      controlled: true;
+      controlledProgressPlan: NativeTextControlledProgressPlan;
+      progress: SharedValue<number>;
+      renderFinalState: boolean;
+      tokenMotion: NativeTextTokenMotion;
+    }
+  | {
+      controlled: false;
+      progress: SharedValue<number>;
+      renderFinalState: boolean;
+      tokenMotion: NativeTextTokenMotion;
+    };
+
 type ControlledAnimatedNativeTextTokenProps = AnimatedTextProps & {
   controlledProgress: SharedValue<number>;
+  controlledProgressPlan: NativeTextControlledProgressPlan;
   tokenMotion: NativeTextTokenMotion;
 };
 
@@ -335,17 +359,14 @@ function createNativeTextTokenMotion(
   recipe: NativeTextRendererProps['recipe'],
   styleState: NativeTextStyleStatePair,
   delaySeconds: number,
-  totalTimelineSpan: number,
 ): NativeTextTokenMotion {
   return {
-    delaySeconds,
     delayMs: createDelayMs(delaySeconds),
     initial: styleState.initial,
     motion: recipe.motion,
     pulseScale: styleState.pulseScale,
     reducedMotion: recipe.accessibility?.reducedMotion ?? 'system',
     target: styleState.target,
-    totalTimelineSpan,
   };
 }
 
@@ -378,19 +399,26 @@ function createTokenDelaySecondsByMotionIndex(
 
 function createTokenMotion(
   recipe: NativeTextRendererProps['recipe'],
-  motionIndex: number | undefined,
+  motionIndex: number,
   styleState: NativeTextStyleStatePair,
   delaySecondsByMotionIndex: readonly number[],
+): NativeTextTokenMotion {
+  return createNativeTextTokenMotion(
+    recipe,
+    styleState,
+    delaySecondsByMotionIndex[motionIndex] ?? 0,
+  );
+}
+
+function createControlledProgressPlan(
+  motionIndex: number,
+  delaySecondsByMotionIndex: readonly number[],
   totalTimelineSpan: number,
-): NativeTextTokenMotion | undefined {
-  return typeof motionIndex === 'number'
-    ? createNativeTextTokenMotion(
-        recipe,
-        styleState,
-        delaySecondsByMotionIndex[motionIndex] ?? 0,
-        totalTimelineSpan,
-      )
-    : undefined;
+): NativeTextControlledProgressPlan {
+  return {
+    tokenDelaySeconds: delaySecondsByMotionIndex[motionIndex] ?? 0,
+    totalTimelineSpan,
+  };
 }
 
 function resolveReduceMotionConfig(reducedMotion: NativeTextTokenMotion['reducedMotion']) {
@@ -442,13 +470,8 @@ function StaticNativeTextToken({ children, style, ...tokenProps }: AnimatedTextP
   );
 }
 
-function useNativeTextAnimatedStyle({
-  controlled,
-  progress,
-  renderFinalState,
-  tokenMotion,
-}: NativeTextAnimatedStyleOptions) {
-  const delaySeconds = tokenMotion.delaySeconds;
+function useNativeTextAnimatedStyle(options: NativeTextAnimatedStyleOptions) {
+  const { controlled, progress, renderFinalState, tokenMotion } = options;
   const initialOpacity = tokenMotion.initial.opacity;
   const initialScale = tokenMotion.initial.scale;
   const initialTranslateX = tokenMotion.initial.translateX;
@@ -458,7 +481,8 @@ function useNativeTextAnimatedStyle({
   const targetTranslateX = tokenMotion.target.translateX;
   const targetTranslateY = tokenMotion.target.translateY;
   const pulseScale = tokenMotion.pulseScale;
-  const totalTimelineSpan = tokenMotion.totalTimelineSpan;
+  const tokenDelaySeconds = controlled ? options.controlledProgressPlan.tokenDelaySeconds : 0;
+  const totalTimelineSpan = controlled ? options.controlledProgressPlan.totalTimelineSpan : 1;
 
   return useAnimatedStyle(() => {
     const rawProgress = renderFinalState ? 1 : progress.value;
@@ -466,7 +490,7 @@ function useNativeTextAnimatedStyle({
     const current = controlled
       ? mapNativeTextControlledProgressToTokenProgress({
           progress: rawProgress,
-          tokenDelaySeconds: delaySeconds,
+          tokenDelaySeconds,
           totalTimelineSpan,
         })
       : uncontrolledProgress;
@@ -495,7 +519,6 @@ function useNativeTextAnimatedStyle({
     initialTranslateX,
     initialTranslateY,
     controlled,
-    delaySeconds,
     progress,
     pulseScale,
     renderFinalState,
@@ -503,6 +526,7 @@ function useNativeTextAnimatedStyle({
     targetScale,
     targetTranslateX,
     targetTranslateY,
+    tokenDelaySeconds,
     totalTimelineSpan,
   ]);
 }
@@ -510,6 +534,7 @@ function useNativeTextAnimatedStyle({
 function ControlledAnimatedNativeTextToken({
   children,
   controlledProgress,
+  controlledProgressPlan,
   style,
   tokenMotion,
   ...tokenProps
@@ -519,6 +544,7 @@ function ControlledAnimatedNativeTextToken({
   const renderFinalState = shouldRenderFinalState(reducedMotionEnabled, reducedMotion);
   const animatedStyle = useNativeTextAnimatedStyle({
     controlled: true,
+    controlledProgressPlan,
     progress: controlledProgress,
     renderFinalState,
     tokenMotion,
@@ -574,25 +600,27 @@ function UncontrolledAnimatedNativeTextToken({
   );
 }
 
-function NativeTextToken({
-  controlledProgress,
-  playbackText,
-  tokenMotion,
-  ...tokenProps
-}: NativeTextTokenProps) {
-  if (!tokenMotion) {
+function NativeTextToken(props: NativeTextTokenProps) {
+  if (!props.tokenMotion) {
+    const { tokenMotion: _tokenMotion, ...tokenProps } = props;
+
     return <StaticNativeTextToken {...tokenProps} />;
   }
 
-  if (controlledProgress) {
+  if ('controlledProgress' in props) {
+    const { controlledProgress, controlledProgressPlan, tokenMotion, ...tokenProps } = props;
+
     return (
       <ControlledAnimatedNativeTextToken
         {...tokenProps}
         controlledProgress={controlledProgress}
+        controlledProgressPlan={controlledProgressPlan}
         tokenMotion={tokenMotion}
       />
     );
   }
+
+  const { playbackText, tokenMotion, ...tokenProps } = props;
 
   return (
     <UncontrolledAnimatedNativeTextToken
@@ -662,29 +690,63 @@ function createNativeTextRendererComponent(
     const { motionCount, motionIndexByTokenId } = createMotionIndexByTokenId(tokens);
     const delaySecondsByMotionIndex = createTokenDelaySecondsByMotionIndex(recipe, motionCount);
     const totalTimelineSpan = createNativeTextControlledTimelineSpan(delaySecondsByMotionIndex);
+    const controlledProgress = textProps?.progress;
 
     return (
       <View {...containerProps} style={createContainerStyle(textStyle)}>
-        {tokens.map((token) => (
-          <NativeTextToken
-            {...tokenAccessibilityProps}
-            {...tokenTextProps}
-            controlledProgress={textProps?.progress}
-            key={token.id}
-            playbackText={token.text}
-            style={textStyle}
-            testID={options.testIDPrefix ? `${options.testIDPrefix}-${token.index}` : undefined}
-            tokenMotion={createTokenMotion(
-              recipe,
-              motionIndexByTokenId.get(token.id),
-              styleState,
-              delaySecondsByMotionIndex,
-              totalTimelineSpan,
-            )}
-          >
-            {token.text}
-          </NativeTextToken>
-        ))}
+        {tokens.map((token) => {
+          const motionIndex = motionIndexByTokenId.get(token.id);
+          const commonTokenProps = {
+            ...tokenAccessibilityProps,
+            ...tokenTextProps,
+            style: textStyle,
+            testID: options.testIDPrefix ? `${options.testIDPrefix}-${token.index}` : undefined,
+          };
+
+          if (typeof motionIndex !== 'number') {
+            return (
+              <NativeTextToken {...commonTokenProps} key={token.id}>
+                {token.text}
+              </NativeTextToken>
+            );
+          }
+
+          const tokenMotion = createTokenMotion(
+            recipe,
+            motionIndex,
+            styleState,
+            delaySecondsByMotionIndex,
+          );
+
+          if (!controlledProgress) {
+            return (
+              <NativeTextToken
+                {...commonTokenProps}
+                key={token.id}
+                playbackText={token.text}
+                tokenMotion={tokenMotion}
+              >
+                {token.text}
+              </NativeTextToken>
+            );
+          }
+
+          return (
+            <NativeTextToken
+              {...commonTokenProps}
+              controlledProgress={controlledProgress}
+              controlledProgressPlan={createControlledProgressPlan(
+                motionIndex,
+                delaySecondsByMotionIndex,
+                totalTimelineSpan,
+              )}
+              key={token.id}
+              tokenMotion={tokenMotion}
+            >
+              {token.text}
+            </NativeTextToken>
+          );
+        })}
       </View>
     );
   }

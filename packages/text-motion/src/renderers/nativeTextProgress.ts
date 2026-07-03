@@ -1,9 +1,12 @@
 export const NATIVE_TEXT_CONTROLLED_TOKEN_TIMELINE_SPAN = 1;
 
-type NativeTextControlledProgressInput = {
-  progress: number;
+export type NativeTextControlledProgressPlan = {
   tokenDelaySeconds: number;
   totalTimelineSpan: number;
+};
+
+type NativeTextControlledProgressInput = NativeTextControlledProgressPlan & {
+  progress: number;
 };
 
 export function clampNativeTextProgress(progress: number): number {
