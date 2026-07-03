@@ -28,7 +28,7 @@ function createTokenMotion(overrides: Partial<NativeTextTokenMotion> = {}): Nati
     pulseScale: 1,
     reducedMotion: 'system',
     target: BASE_STYLE_STATE,
-    totalDurationSeconds: 1,
+    totalTimelineSpan: 1,
     ...overrides,
   };
 }
@@ -176,14 +176,14 @@ describe('nativeTextPlayback', () => {
       tokenMotion: createTokenMotion({
         delayMs: 80,
         delaySeconds: 0.08,
-        totalDurationSeconds: 1.24,
+        totalTimelineSpan: 1.24,
       }),
     });
     const sameAutoplayRun = createPlaybackRun({
       tokenMotion: createTokenMotion({
         delayMs: 80,
         delaySeconds: 0.0804,
-        totalDurationSeconds: 2,
+        totalTimelineSpan: 2,
       }),
     });
 

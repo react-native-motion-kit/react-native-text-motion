@@ -48,6 +48,11 @@ import {
   type NativeTextStyleState,
   type NativeTextTokenMotion,
 } from './nativeTextPlayback';
+import {
+  clampNativeTextProgress,
+  createNativeTextControlledTimelineSpan,
+  mapNativeTextControlledProgressToTokenProgress,
+} from './nativeTextProgress';
 
 type AnimatedTextProps = TextProps & {
   children?: ReactNode;
@@ -144,8 +149,6 @@ const DEFAULT_STYLE_STATE: NativeTextStyleState = {
   translateX: 0,
   translateY: 0,
 };
-
-const CONTROLLED_TOKEN_TIMELINE_SPAN = 1;
 
 const preserveStyleState: NativeTextStyleStateTransform = (state) => state;
 const preserveNumber: NativeTextNumberTransform = (value) => value;
@@ -332,7 +335,7 @@ function createNativeTextTokenMotion(
   recipe: NativeTextRendererProps['recipe'],
   styleState: NativeTextStyleStatePair,
   delaySeconds: number,
-  totalDurationSeconds: number,
+  totalTimelineSpan: number,
 ): NativeTextTokenMotion {
   return {
     delaySeconds,
@@ -342,7 +345,7 @@ function createNativeTextTokenMotion(
     pulseScale: styleState.pulseScale,
     reducedMotion: recipe.accessibility?.reducedMotion ?? 'system',
     target: styleState.target,
-    totalDurationSeconds,
+    totalTimelineSpan,
   };
 }
 
@@ -373,28 +376,19 @@ function createTokenDelaySecondsByMotionIndex(
   );
 }
 
-function createTotalDurationSeconds(delaySecondsByMotionIndex: readonly number[]): number {
-  const maxDelaySeconds = delaySecondsByMotionIndex.reduce(
-    (maxDelay, delaySeconds) => Math.max(maxDelay, delaySeconds),
-    0,
-  );
-
-  return maxDelaySeconds + CONTROLLED_TOKEN_TIMELINE_SPAN;
-}
-
 function createTokenMotion(
   recipe: NativeTextRendererProps['recipe'],
   motionIndex: number | undefined,
   styleState: NativeTextStyleStatePair,
   delaySecondsByMotionIndex: readonly number[],
-  totalDurationSeconds: number,
+  totalTimelineSpan: number,
 ): NativeTextTokenMotion | undefined {
   return typeof motionIndex === 'number'
     ? createNativeTextTokenMotion(
         recipe,
         styleState,
         delaySecondsByMotionIndex[motionIndex] ?? 0,
-        totalDurationSeconds,
+        totalTimelineSpan,
       )
     : undefined;
 }
@@ -464,19 +458,19 @@ function useNativeTextAnimatedStyle({
   const targetTranslateX = tokenMotion.target.translateX;
   const targetTranslateY = tokenMotion.target.translateY;
   const pulseScale = tokenMotion.pulseScale;
-  const totalDurationSeconds = tokenMotion.totalDurationSeconds;
+  const totalTimelineSpan = tokenMotion.totalTimelineSpan;
 
   return useAnimatedStyle(() => {
     const rawProgress = renderFinalState ? 1 : progress.value;
-    const finiteProgress = Number.isFinite(rawProgress) ? rawProgress : 0;
-    const clampedGlobalProgress = Math.min(1, Math.max(0, finiteProgress));
-    const virtualTime = clampedGlobalProgress * totalDurationSeconds;
-    const controlledTokenProgress = Math.min(
-      1,
-      Math.max(0, (virtualTime - delaySeconds) / CONTROLLED_TOKEN_TIMELINE_SPAN),
-    );
-    const current = controlled ? controlledTokenProgress : finiteProgress;
-    const clampedCurrent = Math.min(1, Math.max(0, current));
+    const uncontrolledProgress = Number.isFinite(rawProgress) ? rawProgress : 0;
+    const current = controlled
+      ? mapNativeTextControlledProgressToTokenProgress({
+          progress: rawProgress,
+          tokenDelaySeconds: delaySeconds,
+          totalTimelineSpan,
+        })
+      : uncontrolledProgress;
+    const clampedCurrent = clampNativeTextProgress(current);
     const baseScale = initialScale + (targetScale - initialScale) * current;
     const pulseProgress = 1 - Math.abs(clampedCurrent * 2 - 1);
     const pulseMultiplier = 1 + (pulseScale - 1) * pulseProgress;
@@ -509,7 +503,7 @@ function useNativeTextAnimatedStyle({
     targetScale,
     targetTranslateX,
     targetTranslateY,
-    totalDurationSeconds,
+    totalTimelineSpan,
   ]);
 }
 
@@ -667,7 +661,7 @@ function createNativeTextRendererComponent(
     const styleState = createNativeTextStyleStatePair(recipe.effects);
     const { motionCount, motionIndexByTokenId } = createMotionIndexByTokenId(tokens);
     const delaySecondsByMotionIndex = createTokenDelaySecondsByMotionIndex(recipe, motionCount);
-    const totalDurationSeconds = createTotalDurationSeconds(delaySecondsByMotionIndex);
+    const totalTimelineSpan = createNativeTextControlledTimelineSpan(delaySecondsByMotionIndex);
 
     return (
       <View {...containerProps} style={createContainerStyle(textStyle)}>
@@ -685,7 +679,7 @@ function createNativeTextRendererComponent(
               motionIndexByTokenId.get(token.id),
               styleState,
               delaySecondsByMotionIndex,
-              totalDurationSeconds,
+              totalTimelineSpan,
             )}
           >
             {token.text}

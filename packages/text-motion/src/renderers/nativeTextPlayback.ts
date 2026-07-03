@@ -15,7 +15,7 @@ export type NativeTextTokenMotion = {
   motion?: TextMotionMotionConfig;
   pulseScale: number;
   reducedMotion: 'final-state' | 'system';
-  totalDurationSeconds: number;
+  totalTimelineSpan: number;
 };
 
 type NativeTextMotionOptionSnapshotValue =
