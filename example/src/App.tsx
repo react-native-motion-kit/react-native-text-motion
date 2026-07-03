@@ -23,7 +23,7 @@ import {
   softWave,
 } from '@react-native-motion-kit/text-motion/presets';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -342,8 +342,19 @@ function nextDemoIndex(index: number): number {
   return (index + 1) % demos.length;
 }
 
-function ControlledProgressDemo({ text }: { text: string }) {
+function ControlledProgressDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
   const progress = useSharedValue(0);
+  const replaySignalRef = useRef(replaySignal);
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 720 });
+  }, [progress, replaySignal]);
 
   return (
     <View style={styles.controlledDemo}>
@@ -438,7 +449,7 @@ export default function App() {
 
           <View style={styles.motionFrame}>
             {controlledDemoSelected ? (
-              <ControlledProgressDemo key={demo.id} text={demo.text} />
+              <ControlledProgressDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : (
               MotionText && (
                 <MotionText

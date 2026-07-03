@@ -57,6 +57,14 @@ Controlled progress는 text motion이 component 내부 autoplay가 아니라 외
 기본 controlled progress 예시:
 
 ```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
 import { Button } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 

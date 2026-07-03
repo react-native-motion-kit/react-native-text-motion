@@ -59,6 +59,14 @@ Controlled progress is useful when text motion should follow something outside t
 Basic controlled progress usage:
 
 ```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
 import { Button } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
