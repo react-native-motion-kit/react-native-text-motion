@@ -94,6 +94,8 @@ export function Headline() {
 
 `controls` is a command channel, not a progress value. Use it for buttons, screen focus, onboarding steps, example replay controls, and coordinated title/subtitle replay.
 
+Performance note: controls are intended for short UI text such as titles, labels, and product copy. If you plan to animate long paragraphs, grapheme-split copy, or many rows at once, measure in your target app before treating that as a supported workload.
+
 Controlled progress is useful when text motion should follow a raw value outside the component, such as scroll position, gesture progress, or another Reanimated shared value. In that mode the app owns the exact progress and the text component only renders the current state.
 
 Basic controlled progress usage:

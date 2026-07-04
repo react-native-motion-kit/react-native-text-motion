@@ -343,6 +343,10 @@ export function Headline() {
 
 Text Motion은 playback을 위한 context/provider API나 public component ref API를 제공하지 않습니다. 연결 관계가 JSX에서 보이도록 `controls={controls}`로 명시적으로 전달하세요.
 
+성능 관점에서 `controls`는 짧은 UI 텍스트에 맞춰 설계되어 있습니다. Title, label, 짧은 product sentence라면 playback work가 작고 예측 가능합니다. 긴 문단, 많은 row, 글자 단위로 쪼개는 grapheme split 텍스트에 쓰려면 example의 stress case를 확인하고 target device에서 먼저 측정하세요.
+
+큰 workload가 중요해지면 renderer 내부 구현은 바뀔 수 있습니다. 그래서 example stress case는 controls 구현 방식에 대한 public promise가 아니라 profiling aid로 보는 편이 안전합니다.
+
 ### Raw Progress
 
 Text motion이 앱이 이미 소유한 raw value를 따라가야 한다면 `progress`를 사용하세요.

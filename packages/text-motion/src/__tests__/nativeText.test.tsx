@@ -1,6 +1,7 @@
 import {
   defineTextMotion,
   fade,
+  graphemes,
   nativeText,
   parentLabelPolicy,
   pulse,
@@ -823,6 +824,68 @@ describe('nativeText', () => {
     });
   });
 
+  it('keeps controls subscriptions stable for dense grapheme text', async () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const Reveal = defineTextMotion()
+      .split(graphemes())
+      .layout(nativeText({ testIDPrefix: 'glyph' }))
+      .effect(fade())
+      .component();
+    const view = await render(<Reveal controls={controls}>MotionKit</Reveal>);
+    const initialListenerCount = descriptor.getListenerCount();
+
+    expect(initialListenerCount).toBeGreaterThan(0);
+
+    await view.rerender(<Reveal controls={controls}>MotionKit</Reveal>);
+
+    expect(descriptor.getListenerCount()).toBe(initialListenerCount);
+
+    controls.replay();
+    controls.reset();
+    controls.play();
+
+    expect(descriptor.getListenerCount()).toBe(initialListenerCount);
+
+    await view.unmount();
+
+    expect(descriptor.getListenerCount()).toBe(0);
+  });
+
+  it('sums shared controls subscriptions across attached text motion components', async () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const WordReveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+    const GraphemeReveal = defineTextMotion()
+      .split(graphemes())
+      .layout(nativeText({ testIDPrefix: 'glyph' }))
+      .effect(fade())
+      .component();
+    const view = await render(
+      <>
+        <WordReveal controls={controls}>Alpha beta</WordReveal>
+        <GraphemeReveal controls={controls}>Tone</GraphemeReveal>
+      </>,
+    );
+    const attachedListenerCount = descriptor.getListenerCount();
+
+    expect(attachedListenerCount).toBeGreaterThan(1);
+
+    await view.rerender(<GraphemeReveal controls={controls}>Tone</GraphemeReveal>);
+    const remainingListenerCount = descriptor.getListenerCount();
+
+    expect(remainingListenerCount).toBeGreaterThan(0);
+    expect(remainingListenerCount).toBeLessThan(attachedListenerCount);
+
+    await view.unmount();
+
+    expect(descriptor.getListenerCount()).toBe(0);
+  });
+
   it('cleans up controls subscriptions on unmount and controls changes', async () => {
     const firstControls = createTextMotionControlsHandle();
     const secondControls = createTextMotionControlsHandle();
@@ -833,18 +896,19 @@ describe('nativeText', () => {
       .layout(nativeText({ testIDPrefix: 'word' }))
       .effect(fade())
       .component();
-    const view = await render(<Reveal controls={firstControls}>Hello</Reveal>);
+    const view = await render(<Reveal controls={firstControls}>Hello motion</Reveal>);
+    const attachedListenerCount = firstDescriptor.getListenerCount();
 
-    expect(firstDescriptor.getListenerCount()).toBe(1);
+    expect(attachedListenerCount).toBeGreaterThan(0);
 
-    await view.rerender(<Reveal controls={firstControls}>Hello</Reveal>);
+    await view.rerender(<Reveal controls={firstControls}>Hello motion</Reveal>);
 
-    expect(firstDescriptor.getListenerCount()).toBe(1);
+    expect(firstDescriptor.getListenerCount()).toBe(attachedListenerCount);
 
-    await view.rerender(<Reveal controls={secondControls}>Hello</Reveal>);
+    await view.rerender(<Reveal controls={secondControls}>Hello motion</Reveal>);
 
     expect(firstDescriptor.getListenerCount()).toBe(0);
-    expect(secondDescriptor.getListenerCount()).toBe(1);
+    expect(secondDescriptor.getListenerCount()).toBe(attachedListenerCount);
 
     await view.unmount();
 

@@ -177,6 +177,78 @@ const ControlsPlaybackText = defineTextMotion()
   .motion({ kind: 'timing', options: { duration: 420 } })
   .component();
 
+const ControlsStressWordsText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.018))
+  .effect(rise({ y: 8 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 320 } })
+  .component();
+
+const ControlsStressGraphemeText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.006))
+  .effect(scale({ from: 0.94 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 260 } })
+  .component();
+
+type ControlsStressCase = {
+  Component: TextMotionComponent;
+  id: string;
+  label: string;
+  tokenNote: string;
+} & (
+  | {
+      rows?: never;
+      text: string;
+    }
+  | {
+      rows: readonly string[];
+      text?: never;
+    }
+);
+
+const controlsStressCases: readonly ControlsStressCase[] = [
+  {
+    Component: ControlsStressWordsText,
+    id: 'normal-words',
+    label: 'Normal word case',
+    text: 'Manual stress checks repeated controls replay across a longer headline',
+    tokenNote: '10 word tokens',
+  },
+  {
+    Component: ControlsStressGraphemeText,
+    id: 'heavy-graphemes',
+    label: 'Heavy grapheme case',
+    text: 'MotionKit'.repeat(8),
+    tokenNote: '72 grapheme tokens',
+  },
+  {
+    Component: ControlsStressGraphemeText,
+    id: 'extreme-graphemes',
+    label: 'Extreme grapheme case',
+    text: 'ControlStress'.repeat(12),
+    tokenNote: '156 grapheme tokens',
+  },
+  {
+    Component: ControlsStressWordsText,
+    id: 'shared-rows',
+    label: 'Shared rows case',
+    rows: [
+      'Replay rows without remounting',
+      'Shared controls fan out here',
+      'Several labels move together',
+      'Each row owns playback',
+      'Stress the command path',
+      'Watch for visible jank',
+      'Keep tapping replay quickly',
+      'Rows should stay responsive',
+    ],
+    tokenNote: '8 components, 33 word tokens',
+  },
+];
+
 const demoGroups: readonly DemoGroup[] = [
   { id: 'presets', title: 'Presets' },
   { id: 'splitters', title: 'Splitters' },
@@ -338,6 +410,13 @@ const demos: readonly Demo[] = [
     title: 'Playback Controls',
   },
   {
+    caption: 'manual fan-out check',
+    groupId: 'playback',
+    id: 'controls-stress',
+    text: 'Controls stress case',
+    title: 'Controls Stress',
+  },
+  {
     caption: 'progress={sharedValue}',
     groupId: 'playback',
     id: 'controlled-progress',
@@ -356,6 +435,10 @@ function previousDemoIndex(index: number): number {
 
 function nextDemoIndex(index: number): number {
   return (index + 1) % demos.length;
+}
+
+function nextStressCaseIndex(index: number): number {
+  return (index + 1) % controlsStressCases.length;
 }
 
 function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
@@ -390,6 +473,81 @@ function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; te
         </Pressable>
         <Pressable accessibilityRole="button" onPress={controls.play} style={styles.progressButton}>
           <Text style={styles.progressButtonText}>Play</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function ControlsStressDemo({ replaySignal }: { replaySignal: number }) {
+  const controls = useTextMotionControls();
+  const [caseIndex, setCaseIndex] = useState(0);
+  const replaySignalRef = useRef(replaySignal);
+  const stressCase = controlsStressCases[caseIndex] ?? controlsStressCases[0];
+  const StressText = stressCase.Component;
+  const stressRows = stressCase.rows;
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    controls.replay();
+  }, [controls, replaySignal]);
+
+  return (
+    <View style={styles.controlledDemo}>
+      <View style={styles.stressMetaGroup}>
+        <Text style={styles.stressMeta}>{stressCase.label}</Text>
+        <Text style={styles.stressMetaDetail}>{stressCase.tokenNote}</Text>
+      </View>
+
+      {stressRows ? (
+        <View style={styles.stressRows}>
+          {stressRows.map((rowText) => (
+            <StressText
+              controls={controls}
+              key={rowText}
+              style={[styles.motionText, styles.stressRowText]}
+            >
+              {rowText}
+            </StressText>
+          ))}
+        </View>
+      ) : (
+        <StressText
+          controls={controls}
+          key={stressCase.id}
+          style={[styles.motionText, styles.stressMotionText]}
+        >
+          {stressCase.text}
+        </StressText>
+      )}
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={controls.replay}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Replay</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={controls.reset}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Reset</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setCaseIndex((index) => nextStressCaseIndex(index));
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Case</Text>
         </Pressable>
       </View>
     </View>
@@ -455,6 +613,7 @@ export default function App() {
   const demo = demos[demoIndex] ?? demos[0];
   const MotionText = demo.Component;
   const controlsDemoSelected = demo.id === 'playback-controls';
+  const controlsStressDemoSelected = demo.id === 'controls-stress';
   const controlledDemoSelected = demo.id === 'controlled-progress';
 
   return (
@@ -505,6 +664,8 @@ export default function App() {
           <View style={styles.motionFrame}>
             {controlsDemoSelected ? (
               <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
+            ) : controlsStressDemoSelected ? (
+              <ControlsStressDemo key={demo.id} replaySignal={replayKey} />
             ) : controlledDemoSelected ? (
               <ControlledProgressDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : (
@@ -713,6 +874,36 @@ const styles = StyleSheet.create({
   },
   stageTitleGroup: {
     flex: 1,
+  },
+  stressMeta: {
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  stressMetaDetail: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  stressMetaGroup: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  stressMotionText: {
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  stressRows: {
+    gap: 4,
+    width: '100%',
+  },
+  stressRowText: {
+    fontSize: 15,
+    lineHeight: 20,
   },
   summary: {
     color: '#475569',

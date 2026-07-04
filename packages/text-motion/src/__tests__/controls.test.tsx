@@ -51,6 +51,29 @@ describe('text motion controls', () => {
     expect(commands).toEqual([]);
   });
 
+  it('fans out commands once per subscribed listener and stops after unsubscribe', () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const callsByListener = Array.from({ length: 64 }, (): TextMotionControlCommand[] => []);
+    const unsubscribers = callsByListener.map((commands) =>
+      descriptor.subscribe((command) => {
+        commands.push(command);
+      }),
+    );
+
+    controls.replay();
+    controls.stop();
+
+    expect(callsByListener.every((commands) => commands.length === 2)).toBe(true);
+    expect(callsByListener.every((commands) => commands[0]?.kind === 'replay')).toBe(true);
+    expect(callsByListener.every((commands) => commands[1]?.kind === 'stop')).toBe(true);
+
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+    controls.play();
+
+    expect(callsByListener.every((commands) => commands.length === 2)).toBe(true);
+  });
+
   it('keeps old controls inactive after moving a listener to a different controls object', () => {
     const firstControls = createTextMotionControlsHandle();
     const secondControls = createTextMotionControlsHandle();

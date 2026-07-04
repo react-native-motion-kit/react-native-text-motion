@@ -343,6 +343,10 @@ One controls object may be passed to multiple text motion components. Commands b
 
 Text Motion intentionally does not provide a context/provider playback API or a public component ref API. Pass controls explicitly with `controls={controls}` so the connection is visible in JSX.
 
+Performance note: controls are designed for short UI text. For a title, label, or short product sentence, playback work should stay small and predictable. For long paragraphs, dense lists, or grapheme-split text with many characters, check the example stress case and measure on your target device before using it in production.
+
+The renderer internals may change as larger workloads become important, so treat the example stress case as a profiling aid rather than a public promise about how controls are implemented.
+
 ### Raw Progress
 
 Use `progress` when text motion should follow a raw value the app already owns.
