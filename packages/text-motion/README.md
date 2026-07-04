@@ -477,6 +477,43 @@ Skia remains an optional future package boundary, not a dependency of this core 
 
 Context/provider playback wiring and public component ref playback are not deferred features. They are intentionally outside this package's API shape because they hide ownership and make remount/lifecycle behavior easier to misuse. Use explicit `controls={controls}` wiring when one or more text components should respond to event-driven playback commands.
 
+## Scope & Roadmap
+
+Text Motion is a split text motion engine, not a generic animation package. The core question for this package is:
+
+```txt
+Does this feature improve something specific to split text: splitting, layout mapping, token timing, text effects, renderer capability, accessibility, or token-level playback?
+```
+
+If the answer is yes, it may belong in `@react-native-motion-kit/text-motion`.
+
+Core text-motion work should stay focused on:
+
+- splitters, token metadata, and layout-aware text motion
+- native text renderer reliability and performance
+- timeline, effect, motion, controls, and progress composition for split tokens
+- accessibility behavior for decorative token animation
+- presets that help users ship common title, label, and product-copy motion faster
+
+Advanced text effects can be considered when they still depend on text tokens or text layout:
+
+- typewriter, scramble, wipe, and highlight sweep effects
+- reliable line-aware reveal based on actual rendered layout, once RN layout measurement and token-to-line mapping policies are stable enough to document
+- text-change transitions where old and new token sets need a clear playback policy
+
+Renderer-specific effects should stay behind renderer capability boundaries:
+
+- blur, glow, shader text, masks, and glyph distortion are better candidates for an optional Skia renderer package than the core native text renderer
+- native-only effects should not silently accept renderer-specific options they cannot support
+
+Out-of-scope features are likely better served by separate package candidates when they solve a different problem:
+
+- number count-up, odometer, currency, percentage, timer, and delta animations are value-formatting problems, not split-text layout problems
+- generic `View` animation, scene animation, and Lottie-style workflows belong outside this package
+- a separate value-motion package could share the Motion Kit philosophy without expanding the text-motion API surface
+
+The decision rule is intentionally conservative: add a feature here only when it improves text-specific production work without making the common recipe API harder to understand. Otherwise, keep it deferred, renderer-specific, or a separate package.
+
 ## Should You Use It?
 
 This package is intentionally small in the MVP. It is best suited for short, high-value UI text where split motion improves the experience without taking over layout.

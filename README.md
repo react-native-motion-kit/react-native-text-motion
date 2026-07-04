@@ -155,6 +155,16 @@ By default, playback is lifecycle-driven: animated tokens autoplay on mount, ord
 
 Skia, stable line reveal, rich text, and RN-rendered line-to-token mapping are deferred. Context/provider playback wiring and public playback refs are intentionally not part of the design; pass `controls` explicitly where a component should respond to playback commands.
 
+## Scope & Roadmap
+
+`text-motion` stays focused on split text motion: tokenization, layout-aware timing, effects, renderers, split-token playback, accessibility, and presets for titles, labels, onboarding copy, and product copy.
+
+Features that depend on text tokens or text layout can be considered here, including typewriter, scramble, wipe, text-change transitions, and renderer-specific effects behind explicit capability boundaries. Precise line-aware reveal remains deferred until RN layout measurement and token-to-line mapping policies are reliable enough to document.
+
+Features that solve a different problem are likely better served by separate package candidates. Number count-up, odometer, currency, percentage, timer, and delta animations are value-formatting problems rather than split-text layout problems. A separate value-motion package could share Motion Kit conventions without expanding the `text-motion` API surface.
+
+Decision rule: add a feature to `text-motion` only when it improves text-specific production work without making the common recipe API harder to understand.
+
 ## Install
 
 ```sh

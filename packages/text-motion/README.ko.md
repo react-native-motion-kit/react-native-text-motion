@@ -477,6 +477,43 @@ Skia는 core package의 dependency가 아니라 future optional package boundary
 
 context/provider playback wiring과 public component ref playback은 deferred feature가 아닙니다. ownership이 숨겨지고 remount/lifecycle 동작을 잘못 사용하기 쉬워서 이 패키지의 API 방향에서 의도적으로 제외합니다. 하나 이상의 text component가 event-driven playback command에 반응해야 한다면 `controls={controls}`를 명시적으로 전달하세요.
 
+## Scope & Roadmap
+
+Text Motion은 generic animation package가 아니라 split text motion engine입니다. 이 패키지에 기능을 넣을지 판단할 때 핵심 질문은 이것입니다.
+
+```txt
+이 기능이 split text에 필요한 일을 개선하는가? 예를 들면 text split, layout mapping, token timing, text effect, renderer capability, accessibility, token별 playback.
+```
+
+답이 yes라면 `@react-native-motion-kit/text-motion`에 들어올 후보가 될 수 있습니다.
+
+Core text-motion 작업은 다음에 집중해야 합니다.
+
+- splitter, token metadata, layout-aware text motion
+- native text renderer의 신뢰성과 성능
+- split token을 위한 timeline, effect, motion, controls, progress composition
+- decorative token animation을 위한 accessibility behavior
+- title, label, product copy motion을 빠르게 만들 수 있는 preset
+
+Advanced text effect는 여전히 text token 또는 text layout에 의존할 때 고려할 수 있습니다.
+
+- typewriter, scramble, wipe, highlight sweep effect
+- RN layout 측정과 token-to-line mapping 정책이 안정된 뒤 다룰 수 있는 신뢰 가능한 line-aware reveal
+- old/new token set의 playback policy가 필요한 text-change transition
+
+Renderer-specific effect는 renderer capability boundary 뒤에 둬야 합니다.
+
+- blur, glow, shader text, mask, glyph distortion은 core native text renderer보다 optional Skia renderer package 후보에 가깝습니다.
+- native renderer가 지원하지 못하는 renderer-specific option을 조용히 받아들이면 안 됩니다.
+
+다른 문제를 푸는 기능은 별도 package가 더 적합할 가능성이 큽니다.
+
+- number count-up, odometer, currency, percentage, timer, delta animation은 split-text layout 문제가 아니라 value formatting 문제입니다.
+- generic `View` animation, scene animation, Lottie-style workflow는 이 패키지 밖의 영역입니다.
+- 나중에 별도의 value-motion 계열 package가 필요해질 수 있지만, 그건 text-motion API surface를 넓히는 방식보다 별도 package로 두는 편이 안전합니다.
+
+결정 기준은 보수적으로 잡습니다. 사용자의 text-specific production work를 개선하면서 common recipe API를 더 어렵게 만들지 않을 때만 이 패키지에 추가합니다. 그렇지 않다면 deferred, renderer-specific, 또는 별도 package로 둡니다.
+
 ## 지금 사용해도 될까?
 
 이 패키지는 MVP에서 의도적으로 작게 시작합니다. layout 전체를 지배하기보다, 짧고 중요한 UI 텍스트에 split motion을 더하는 경우에 가장 잘 맞습니다.
