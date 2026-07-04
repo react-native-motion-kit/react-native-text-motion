@@ -13,7 +13,12 @@ import { Pressable } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
 import type { TextMotionInternalRecipeConfig, TextMotionToken } from '../types';
+import type { TextMotionComponentProps } from '../types';
 
+import {
+  createTextMotionControlsHandle,
+  readTextMotionControlsDescriptor,
+} from '../controls/descriptors';
 import { createTextMotionEffect } from '../effects/compose';
 import {
   createTextMotionTimelineHandle,
@@ -576,6 +581,329 @@ describe('nativeText', () => {
     });
 
     expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('keeps mount autoplay when controls are provided', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 300 } })
+      .component();
+
+    await render(<Reveal controls={controls}>Hello</Reveal>);
+    const word = getHiddenToken('word-0');
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(300);
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('replays controlled text with recipe motion and timeline delays', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .timeline(stagger(0.1))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 200 } })
+      .component();
+
+    await render(<Reveal controls={controls}>One two</Reveal>);
+    const firstWord = getHiddenToken('word-0');
+    const secondWord = getHiddenToken('word-2');
+
+    jest.advanceTimersByTime(300);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await act(async () => {
+      controls.replay();
+    });
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(200);
+
+    expect(firstWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(secondWord).not.toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(100);
+
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('resets controlled playback to the initial state', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 400 } })
+      .component();
+
+    await render(<Reveal controls={controls}>Hello</Reveal>);
+    const word = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    await act(async () => {
+      controls.reset();
+      await jest.advanceTimersByTimeAsync(1);
+    });
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('stops controlled playback while preserving current progress', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 400 } })
+      .component();
+
+    await render(<Reveal controls={controls}>Hello</Reveal>);
+    const word = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+
+    await act(async () => {
+      controls.stop();
+      await jest.advanceTimersByTimeAsync(1);
+    });
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('plays controlled playback from the current progress without resetting', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 400 } })
+      .component();
+
+    await render(<Reveal controls={controls}>Hello</Reveal>);
+    const word = getHiddenToken('word-0');
+
+    jest.advanceTimersByTime(200);
+    controls.stop();
+
+    await act(async () => {
+      controls.play();
+      await jest.advanceTimersByTimeAsync(1);
+    });
+
+    expect(word).not.toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(word).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('broadcasts shared controls to multiple text motion components', async () => {
+    const controls = createTextMotionControlsHandle();
+    const FirstReveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'first' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 200 } })
+      .component();
+    const SecondReveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'second' }))
+      .effect(rise({ y: 10 }).and(fade()))
+      .motion({ kind: 'timing', options: { duration: 400 } })
+      .component();
+
+    await render(
+      <>
+        <FirstReveal controls={controls}>First</FirstReveal>
+        <SecondReveal controls={controls}>Second</SecondReveal>
+      </>,
+    );
+
+    jest.advanceTimersByTime(400);
+    controls.replay();
+
+    expect(getHiddenToken('first-0')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(getHiddenToken('second-0')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 10 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(200);
+
+    expect(getHiddenToken('first-0')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(getHiddenToken('second-0')).not.toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(200);
+
+    expect(getHiddenToken('second-0')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('cleans up controls subscriptions on unmount and controls changes', async () => {
+    const firstControls = createTextMotionControlsHandle();
+    const secondControls = createTextMotionControlsHandle();
+    const firstDescriptor = readTextMotionControlsDescriptor(firstControls);
+    const secondDescriptor = readTextMotionControlsDescriptor(secondControls);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+    const view = await render(<Reveal controls={firstControls}>Hello</Reveal>);
+
+    expect(firstDescriptor.getListenerCount()).toBe(1);
+
+    await view.rerender(<Reveal controls={firstControls}>Hello</Reveal>);
+
+    expect(firstDescriptor.getListenerCount()).toBe(1);
+
+    await view.rerender(<Reveal controls={secondControls}>Hello</Reveal>);
+
+    expect(firstDescriptor.getListenerCount()).toBe(0);
+    expect(secondDescriptor.getListenerCount()).toBe(1);
+
+    await view.unmount();
+
+    expect(secondDescriptor.getListenerCount()).toBe(0);
+  });
+
+  it('does not subscribe static whitespace tokens to controls', async () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal controls={controls}> </Reveal>);
+
+    expect(descriptor.getListenerCount()).toBe(0);
+  });
+
+  it('throws when controls and raw progress are provided together', async () => {
+    const controls = createTextMotionControlsHandle();
+    const progress = Reanimated.makeMutable(0);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText())
+      .effect(fade())
+      .component();
+    const unsafeProps = {
+      children: 'Hello',
+      controls,
+      progress,
+    } as unknown as TextMotionComponentProps;
+
+    await expect(render(<Reveal {...unsafeProps} />)).rejects.toThrow(
+      '@react-native-motion-kit/text-motion cannot receive both progress and controls. Use progress for raw app-owned values, or controls for event-driven playback.',
+    );
+  });
+
+  it('keeps final-state reduced motion final when controls commands run', async () => {
+    jest.mocked(Reanimated.useReducedMotion).mockReturnValue(true);
+
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+      .component();
+
+    await render(<Reveal controls={controls}>Hello</Reveal>);
+    const word = getHiddenToken('word-0');
+
+    controls.reset();
+    controls.replay();
+    controls.stop();
+    controls.play();
+
+    expect(word).toHaveAnimatedStyle({
       opacity: 1,
       transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
     });

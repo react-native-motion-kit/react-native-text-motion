@@ -94,7 +94,7 @@ The `0.032` value is seconds. Each visible token starts 32ms after the previous 
 
 Function-valued options, such as a custom `easing`, are compared by reference when text-motion decides whether an in-flight animation should keep playing or replay. Hoist or reuse the same function reference when a parent rerender should preserve progress; creating a new function is treated as a motion config change.
 
-`.motion()` configures uncontrolled autoplay only. When a component receives `progress`, drive that shared value yourself with Reanimated `withTiming`, `withSpring`, scroll, gesture, or focus logic.
+`.motion()` configures playback owned by text-motion. It is used by mount autoplay and by `controls` commands. When a component receives raw `progress`, the app owns playback, so `.motion()` is not applied to that instance.
 
 ## Presets
 
@@ -251,6 +251,7 @@ Components created with `nativeText()` intentionally support a narrow prop surfa
 - `nativeID`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `controls`
 - `progress`
 - `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, and `onAccessibilityAction`
 
@@ -279,20 +280,80 @@ The default lifecycle is automatic and input-driven.
 
 The example app may remount its demo player to make repeated inspection convenient. Treat that as demo UI behavior, not the recommended app API.
 
-### Controlled Progress
+### Playback Controls
 
-Use `progress` when text motion should follow something the app already controls.
+Use `controls` when an event should tell a text motion component to play, replay, reset, or stop.
 
 Common examples:
 
 - a headline reveals after the user taps a button
 - onboarding copy advances with the current step
 - a screen title replays when a screen receives focus
-- text follows a scroll or gesture shared value
 - a label appears only after a form field becomes valid
-- several UI elements need to move from the same shared progress value
+- a hero title and subtitle replay together from one control
 
-In these cases, the text component should not decide when to start. The app already knows the right moment, so the app owns a Reanimated shared value and passes it to the text component.
+In these cases, the app owns the event, but the text component still owns playback execution. The component uses its recipe, timeline, effects, and `.motion()` config.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  useTextMotionControls,
+  words,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const ReplayableReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(rise({ y: 12 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function Headline() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <ReplayableReveal controls={controls}>
+        Replay without remounting
+      </ReplayableReveal>
+
+      <Button title="Replay" onPress={controls.replay} />
+      <Button title="Reset" onPress={controls.reset} />
+    </>
+  );
+}
+```
+
+`controls` is a command channel, not a progress value:
+
+- `play()` moves from the current progress toward the final state.
+- `replay()` resets to the initial state and plays again with timeline delays.
+- `reset()` cancels playback and returns to the initial state.
+- `stop()` cancels playback and keeps the current visual progress.
+
+One controls object may be passed to multiple text motion components. Commands broadcast to every attached component, and each component executes the command with its own recipe.
+
+`controls` and `progress` cannot be used together. Use `controls` for discrete events such as buttons and screen focus. Use `progress` when text should follow a continuous value.
+
+Text Motion intentionally does not provide a context/provider playback API or a public component ref API. Pass controls explicitly with `controls={controls}` so the connection is visible in JSX.
+
+### Raw Progress
+
+Use `progress` when text motion should follow a raw value the app already owns.
+
+Common examples:
+
+- text follows a scroll or gesture shared value
+- several UI elements need to move from the same shared progress value
+- a custom Reanimated sequence should drive the phrase from `0` to `1`
+
+In these cases, the text component should not decide when to start or how the value moves. The app owns a Reanimated shared value and passes it to the text component.
 
 ```tsx
 import {
@@ -306,7 +367,7 @@ import {
 import { Button } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
-const ControlledReveal = defineTextMotion()
+const ProgressReveal = defineTextMotion()
   .split(words())
   .layout(nativeText())
   .timeline(stagger(0.08))
@@ -318,9 +379,9 @@ export function Headline() {
 
   return (
     <>
-      <ControlledReveal progress={progress}>
+      <ProgressReveal progress={progress}>
         Progress drives the whole reveal
-      </ControlledReveal>
+      </ProgressReveal>
 
       <Button
         title="Play"
@@ -342,7 +403,7 @@ export function Headline() {
 
 Think of `progress` as the progress of the whole phrase, not of one word. If you use `stagger(0.08)`, the first word can already be finished while the later words are still catching up. The renderer maps the global shared value to each visible token's local progress, so `stagger()`, `wave()`, `sequence()`, and `parallel()` keep their timing shape in controlled mode. Whitespace is still rendered but does not consume a motion index.
 
-When `progress` is provided, the component is controlled and `.motion()` does not start internal autoplay. Choose the playback curve where you update the shared value:
+When `progress` is provided, the app owns playback and `.motion()` does not start internal autoplay. Choose the playback curve where you update the shared value:
 
 ```tsx
 progress.value = withTiming(1, { duration: 720 });
@@ -350,11 +411,11 @@ progress.value = withSpring(1);
 progress.value = 0;
 ```
 
-If this rendered component receives `progress`, `.motion()` is not applied to that instance. Add `.motion()` only for an uncontrolled version of the same recipe, where the component should autoplay by itself.
+If this rendered component receives `progress`, `.motion()` is not applied to that instance. Add `.motion()` only for autoplay or controls-driven versions of the same recipe.
 
 Important limitation: controlled mode currently uses a fixed token timeline span of `1.0` inside the whole-text progress mapping. In practice that means timeline delays shape when each token starts, while your `withTiming` or `withSpring` call shapes how fast the entire phrase moves from `0` to `1`. If a future version needs per-token span or duration controls in controlled mode, that should be added as an explicit API instead of silently borrowing `.motion()` duration.
 
-Stable `play`, `pause`, `seek`, `reset`, `reverse`, screen focus, in-view, scroll, and gesture drivers remain deferred. Build those by driving the shared value directly for now.
+First-class `pause`, `seek`, `reverse`, screen focus, in-view, scroll, and gesture drivers remain deferred.
 
 ## Accessibility
 
@@ -385,6 +446,7 @@ The fallback is designed for resilient UI motion, not full ICU-level locale segm
 - `nativeText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
 - `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`
+- `useTextMotionControls()` with explicit `controls` prop for event-driven play/replay/reset/stop
 - controlled `progress` via external Reanimated shared values
 - parent-label accessibility policy with hidden animated token nodes
 - `/presets` subpath recipe factories
@@ -403,11 +465,13 @@ These are intentionally not stable exports in the MVP:
 - `scramble`
 - stable `overlayText`
 - Skia renderer or Skia-only effects
-- controller playback APIs such as `play`, `pause`, `seek`, `reset`, `reverse`
+- playback APIs such as `pause`, `seek`, or `reverse`
 - first-class screen focus, in-view, scroll, or gesture drivers
 - RN-rendered line-to-token mapping
 
 Skia remains an optional future package boundary, not a dependency of this core package.
+
+Context/provider playback wiring and public component ref playback are not deferred features. They are intentionally outside this package's API shape because they hide ownership and make remount/lifecycle behavior easier to misuse. Use explicit `controls={controls}` wiring when one or more text components should respond to event-driven playback commands.
 
 ## Should You Use It?
 
@@ -418,20 +482,21 @@ Use it today for:
 - hero titles, section titles, short labels, onboarding copy, and product descriptions
 - word or grapheme entrance motion with `fade`, `rise`, `slide`, `scale`, `pulse`, or `shake`
 - reusable recipe components created from presets or `defineTextMotion()`
-- controlled progress with an external Reanimated shared value
+- event-driven replay/reset/stop controls without remounting the component
+- raw progress with an external Reanimated shared value
 - apps that already use Reanimated 4 and can follow its Worklets setup
 - accessible decorative text motion where the full phrase should remain readable once
 
 Wait for a later version if your feature depends on:
 
-- stable playback APIs such as `play`, `pause`, `seek`, `reset`, or `reverse`
+- playback APIs such as `pause`, `seek`, or `reverse`
 - scroll progress, gesture progress, or viewport/in-view triggers as first-class drivers
 - exact line-level animation, clipping, masking, or per-token line measurement
 - Skia-only visual effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text, inline links, selectable text, or exact native `Text` behavior
 - long paragraphs or many animated rows without measuring performance in your target app
 
-The next product focus is playback controls and drivers: deciding whether helpers for `play`, `pause`, `reset`, screen focus, in-view, scroll, or gesture progress are worth exposing on top of controlled shared-value progress. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
+The next product focus is proving the controls API in real apps and then deciding whether state-transition props, `pause`/`seek`/`reverse`, screen focus helpers, in-view helpers, or scroll/gesture drivers deserve first-class APIs. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
 
 ## Development
 

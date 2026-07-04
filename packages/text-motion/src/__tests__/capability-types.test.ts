@@ -7,8 +7,10 @@ import {
   nativeText,
   parentLabelPolicy,
   stagger,
+  useTextMotionControls,
   wave,
   words,
+  type TextMotionControls,
   type TextMotionComponentProps,
   type TextMotionEffect,
   type TextMotionRendererProps,
@@ -25,7 +27,9 @@ describe('renderer capability types', () => {
 
 declare const publicApi: typeof import('@react-native-motion-kit/text-motion');
 declare const publicRendererProps: TextMotionRendererProps;
+declare const componentControls: TextMotionControls;
 declare const componentProgress: SharedValue<number>;
+declare const hookControls: ReturnType<typeof useTextMotionControls>;
 
 function expectExtensionFactoriesStayInternal() {
   // @ts-expect-error custom effect factories are intentionally not root public API in the MVP.
@@ -36,6 +40,12 @@ function expectExtensionFactoriesStayInternal() {
 
   // @ts-expect-error recipe implementation factories are intentionally not root public API.
   void publicApi.createTextMotionRecipeBuilder;
+
+  // @ts-expect-error controls descriptors are intentionally not root public API.
+  void publicApi.createTextMotionControlsHandle;
+
+  // @ts-expect-error controls descriptors are intentionally not root public API.
+  void publicApi.readTextMotionControlsDescriptor;
 }
 
 void expectExtensionFactoriesStayInternal;
@@ -218,6 +228,36 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
     progress: componentProgress,
   };
 
+  const propsWithControls: TextMotionComponentProps = {
+    children: 'Readable title',
+    controls: componentControls,
+  };
+
+  const propsWithHookControls: TextMotionComponentProps = {
+    children: 'Readable title',
+    controls: hookControls,
+  };
+
+  const plainControls = {
+    play() {},
+    replay() {},
+    reset() {},
+    stop() {},
+  };
+
+  const propsWithPlainControls: TextMotionComponentProps = {
+    children: 'Readable title',
+    // @ts-expect-error controls must be created by useTextMotionControls.
+    controls: plainControls,
+  };
+
+  // @ts-expect-error controls and progress are mutually exclusive playback modes.
+  const propsWithControlsAndProgress: TextMotionComponentProps = {
+    children: 'Readable title',
+    controls: componentControls,
+    progress: componentProgress,
+  };
+
   const propsWithNumberOfLines: TextMotionComponentProps = {
     children: 'Readable title',
     // @ts-expect-error nativeText does not support ellipsis layout as a Text drop-in.
@@ -236,12 +276,6 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
     replayKey: 1,
   };
 
-  const propsWithControls: TextMotionComponentProps = {
-    children: 'Readable title',
-    // @ts-expect-error public controls are deferred until playback ownership is designed.
-    controls: {},
-  };
-
   const propsWithAutoplay: TextMotionComponentProps = {
     children: 'Readable title',
     // @ts-expect-error autoplay prop is deferred until playback ownership needs it.
@@ -256,6 +290,10 @@ function expectTextMotionComponentsRejectUnsupportedTextProps() {
 
   void props;
   void propsWithProgress;
+  void propsWithControls;
+  void propsWithHookControls;
+  void propsWithPlainControls;
+  void propsWithControlsAndProgress;
   void propsWithNumberOfLines;
   void propsWithPressHandler;
   void propsWithReplayKey;

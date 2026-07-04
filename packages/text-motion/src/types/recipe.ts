@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { StyleProp, TextProps, TextStyle } from 'react-native';
 import type { SharedValue, WithSpringConfig, WithTimingConfig } from 'react-native-reanimated';
 
+import type { TextMotionControls } from '../controls';
 import type {
   TextMotionCompatibleEffect,
   TextMotionRenderer,
@@ -145,18 +146,33 @@ export type TextMotionComponentTextProps = TextMotionComponentAccessibilityProps
     style?: StyleProp<TextStyle>;
   };
 
-type TextMotionComponentPlaybackProps = {
+type TextMotionRawProgressPlaybackProps = {
   /**
-   * External normalized progress for controlled playback.
+   * Raw app-owned normalized progress for externally driven playback.
    *
    * `0` renders the initial text motion state and `1` renders the final state. Finite values
    * outside `0..1` are clamped by the renderer; non-finite values are treated as `0`. When
-   * provided, the component is controlled: `.motion()` no longer starts internal autoplay, and
-   * callers should drive this shared value with Reanimated timing, spring, scroll, gesture, or
-   * focus logic.
+   * provided, `.motion()` does not drive playback. Use this for scroll, gesture, or synchronized
+   * shared values where the app owns the exact progress.
    */
   progress?: SharedValue<number>;
+  controls?: never;
 };
+
+type TextMotionControlsPlaybackProps = {
+  progress?: never;
+  /**
+   * Command channel for event-driven playback.
+   *
+   * The component owns playback execution and uses its recipe `.motion()` config. Use this for
+   * buttons, screen focus, onboarding steps, and replay/reset/stop interactions.
+   */
+  controls?: TextMotionControls;
+};
+
+type TextMotionComponentPlaybackProps =
+  | TextMotionRawProgressPlaybackProps
+  | TextMotionControlsPlaybackProps;
 
 /** Props forwarded from a text motion component to its renderer. */
 export type TextMotionComponentRendererProps = TextMotionComponentTextProps &

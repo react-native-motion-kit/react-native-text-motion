@@ -13,6 +13,7 @@ import {
   shake,
   slide,
   stagger,
+  useTextMotionControls,
   type TextMotionComponent,
   wave,
   words,
@@ -166,6 +167,14 @@ const ControlledProgressText = defineTextMotion()
   .layout(nativeText())
   .timeline(stagger(0.08))
   .effect(rise({ y: 12 }).and(fade()))
+  .component();
+
+const ControlsPlaybackText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(rise({ y: 12 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 420 } })
   .component();
 
 const demoGroups: readonly DemoGroup[] = [
@@ -322,6 +331,13 @@ const demos: readonly Demo[] = [
     title: 'Spring Motion',
   },
   {
+    caption: 'controls={controls}',
+    groupId: 'playback',
+    id: 'playback-controls',
+    text: 'Controls replay without remounting',
+    title: 'Playback Controls',
+  },
+  {
     caption: 'progress={sharedValue}',
     groupId: 'playback',
     id: 'controlled-progress',
@@ -340,6 +356,44 @@ function previousDemoIndex(index: number): number {
 
 function nextDemoIndex(index: number): number {
   return (index + 1) % demos.length;
+}
+
+function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
+  const controls = useTextMotionControls();
+  const replaySignalRef = useRef(replaySignal);
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    controls.replay();
+  }, [controls, replaySignal]);
+
+  return (
+    <View style={styles.controlledDemo}>
+      <ControlsPlaybackText controls={controls} style={styles.motionText}>
+        {text}
+      </ControlsPlaybackText>
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={controls.reset}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Reset</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={controls.stop} style={styles.progressButton}>
+          <Text style={styles.progressButtonText}>Stop</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={controls.play} style={styles.progressButton}>
+          <Text style={styles.progressButtonText}>Play</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 }
 
 function ControlledProgressDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
@@ -400,6 +454,7 @@ export default function App() {
   const [replayKey, setReplayKey] = useState(0);
   const demo = demos[demoIndex] ?? demos[0];
   const MotionText = demo.Component;
+  const controlsDemoSelected = demo.id === 'playback-controls';
   const controlledDemoSelected = demo.id === 'controlled-progress';
 
   return (
@@ -448,7 +503,9 @@ export default function App() {
           </View>
 
           <View style={styles.motionFrame}>
-            {controlledDemoSelected ? (
+            {controlsDemoSelected ? (
+              <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
+            ) : controlledDemoSelected ? (
               <ControlledProgressDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : (
               MotionText && (

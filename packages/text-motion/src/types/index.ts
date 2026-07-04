@@ -15,6 +15,7 @@ export type {
   TextMotionTimeline,
   TextMotionTimingOptions,
 } from './recipe';
+export type { TextMotionControls } from '../controls';
 export type {
   TextMotionCompatibleEffect,
   TextMotionMissingCapabilities,

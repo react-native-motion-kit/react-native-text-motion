@@ -20,6 +20,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import type { TextMotionControls } from '../controls';
 import type {
   TextMotionAnyEffect,
   TextMotionAnyEffectDescriptor,
@@ -41,6 +42,7 @@ import {
   createTextMotionRendererHandle,
   readTextMotionTimelineDescriptor,
 } from '../recipe/descriptors';
+import { useNativeTextControlsPlayback } from './nativeTextControls';
 import {
   areNativeTextPlaybackRunsEqual,
   createNativeTextPlaybackRun,
@@ -94,6 +96,7 @@ type ControlledNativeTextTokenProps = AnimatedTextProps & {
 };
 
 type UncontrolledNativeTextTokenProps = AnimatedTextProps & {
+  controls?: TextMotionControls;
   playbackText: string;
   tokenMotion: NativeTextTokenMotion;
 };
@@ -125,6 +128,7 @@ type ControlledAnimatedNativeTextTokenProps = AnimatedTextProps & {
 };
 
 type UncontrolledAnimatedNativeTextTokenProps = AnimatedTextProps & {
+  controls?: TextMotionControls;
   playbackText: string;
   tokenMotion: NativeTextTokenMotion;
 };
@@ -559,6 +563,7 @@ function ControlledAnimatedNativeTextToken({
 
 function UncontrolledAnimatedNativeTextToken({
   children,
+  controls,
   playbackText,
   style,
   tokenMotion,
@@ -593,6 +598,14 @@ function UncontrolledAnimatedNativeTextToken({
     progress.value = createProgressAnimation(playbackRun);
   });
 
+  useNativeTextControlsPlayback({
+    controls,
+    createProgressAnimation,
+    progress,
+    renderFinalState,
+    tokenMotion,
+  });
+
   return (
     <AnimatedText {...tokenProps} style={[style, animatedStyle] as StyleProp<TextStyle>}>
       {children}
@@ -620,11 +633,12 @@ function NativeTextToken(props: NativeTextTokenProps) {
     );
   }
 
-  const { playbackText, tokenMotion, ...tokenProps } = props;
+  const { controls, playbackText, tokenMotion, ...tokenProps } = props;
 
   return (
     <UncontrolledAnimatedNativeTextToken
       {...tokenProps}
+      controls={controls}
       playbackText={playbackText}
       tokenMotion={tokenMotion}
     />
@@ -690,7 +704,14 @@ function createNativeTextRendererComponent(
     const { motionCount, motionIndexByTokenId } = createMotionIndexByTokenId(tokens);
     const delaySecondsByMotionIndex = createTokenDelaySecondsByMotionIndex(recipe, motionCount);
     const totalTimelineSpan = createNativeTextControlledTimelineSpan(delaySecondsByMotionIndex);
-    const controlledProgress = textProps?.progress;
+    const externalProgress = textProps?.progress;
+    const controls = textProps?.controls;
+
+    if (externalProgress && controls) {
+      throw new Error(
+        '@react-native-motion-kit/text-motion cannot receive both progress and controls. Use progress for raw app-owned values, or controls for event-driven playback.',
+      );
+    }
 
     return (
       <View {...containerProps} style={createContainerStyle(textStyle)}>
@@ -718,10 +739,11 @@ function createNativeTextRendererComponent(
             delaySecondsByMotionIndex,
           );
 
-          if (!controlledProgress) {
+          if (!externalProgress) {
             return (
               <NativeTextToken
                 {...commonTokenProps}
+                controls={controls}
                 key={token.id}
                 playbackText={token.text}
                 tokenMotion={tokenMotion}
@@ -734,7 +756,7 @@ function createNativeTextRendererComponent(
           return (
             <NativeTextToken
               {...commonTokenProps}
-              controlledProgress={controlledProgress}
+              controlledProgress={externalProgress}
               controlledProgressPlan={createControlledProgressPlan(
                 motionIndex,
                 delaySecondsByMotionIndex,

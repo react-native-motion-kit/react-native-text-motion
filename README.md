@@ -54,7 +54,47 @@ const WordReveal = defineTextMotion()
   .component();
 ```
 
-Controlled progress is useful when text motion should follow something outside the component, such as a button, onboarding step, screen focus event, scroll position, or gesture progress. In that mode the app owns a Reanimated shared value and the text component only renders the current state.
+Playback controls are useful when an event should tell a text motion component to play, replay, reset, or stop without remounting. In that mode the app owns the event, while the component still owns playback execution and uses its recipe `.motion()` config.
+
+Basic controls usage:
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  useTextMotionControls,
+  words,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const ReplayableReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade().and(rise({ y: 12 })))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function Headline() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <ReplayableReveal controls={controls}>
+        Replay without remounting
+      </ReplayableReveal>
+      <Button title="Replay" onPress={controls.replay} />
+    </>
+  );
+}
+```
+
+`controls` is a command channel, not a progress value. Use it for buttons, screen focus, onboarding steps, example replay controls, and coordinated title/subtitle replay.
+
+Controlled progress is useful when text motion should follow a raw value outside the component, such as scroll position, gesture progress, or another Reanimated shared value. In that mode the app owns the exact progress and the text component only renders the current state.
 
 Basic controlled progress usage:
 
@@ -91,9 +131,9 @@ export function Headline() {
 }
 ```
 
-`progress` is normalized whole-text progress: `0` is initial and `1` is final. Timeline delays still map that global value to each token's local progress, so `stagger()` and `wave()` keep their timing shape. This is handy when a headline should reveal as a user scrolls a card into view, when a label should animate only after a form step is valid, or when a screen wants to replay text on focus without remounting the component.
+`progress` is normalized whole-text progress: `0` is initial and `1` is final. Timeline delays still map that global value to each token's local progress, so `stagger()` and `wave()` keep their timing shape. This is handy when a headline should reveal as a user scrolls a card into view, when text should follow a gesture, or when several UI elements need to share one progress value.
 
-When `progress` is provided, `.motion()` does not run internal autoplay. Choose the playback feel where you update the shared value instead, for example `progress.value = withTiming(1, { duration: 720 })` or `progress.value = withSpring(1)`. Higher-level controller APIs such as `play`, `pause`, `reset`, and first-class scroll/gesture drivers remain deferred.
+When `progress` is provided, `.motion()` does not run internal autoplay. Choose the playback feel where you update the shared value instead, for example `progress.value = withTiming(1, { duration: 720 })` or `progress.value = withSpring(1)`. `controls` and `progress` cannot be used together.
 
 ## Stable MVP Scope
 
@@ -103,14 +143,15 @@ When `progress` is provided, `.motion()` does not run internal autoplay. Choose 
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
 - effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
+- explicit playback `controls` for event-driven play/replay/reset/stop
 - controlled progress via external Reanimated shared values
 - accessibility default: parent label plus hidden decorative token nodes
 
 `nativeText()` is a transform-first token renderer. It uses a wrapping `View` with animated `Text` tokens so transform effects are visible in React Native. It is not a full React Native `Text` drop-in, and layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
 
-By default, playback is lifecycle-driven: animated tokens autoplay on mount, ordinary parent rerenders with the same text/recipe preserve in-flight progress, and text/effect/timeline/motion changes replay the affected token animation. Components also accept `progress`, a Reanimated `SharedValue<number>` from `0` to `1`, for externally controlled playback. When `progress` is provided, `.motion()` no longer runs internal autoplay; drive the shared value yourself with Reanimated timing, spring, scroll, gesture, or focus logic.
+By default, playback is lifecycle-driven: animated tokens autoplay on mount, ordinary parent rerenders with the same text/recipe preserve in-flight progress, and text/effect/timeline/motion changes replay the affected token animation. Components also accept `controls` for event-driven playback and `progress`, a Reanimated `SharedValue<number>` from `0` to `1`, for raw externally controlled progress. `controls` uses the component recipe `.motion()`; `progress` is app-owned and bypasses `.motion()`.
 
-Skia, stable line reveal, controller playback, rich text, and RN-rendered line-to-token mapping are deferred.
+Skia, stable line reveal, rich text, and RN-rendered line-to-token mapping are deferred. Context/provider playback wiring and public playback refs are intentionally not part of the design; pass `controls` explicitly where a component should respond to playback commands.
 
 ## Install
 
@@ -152,19 +193,20 @@ Use this package today when you need:
 - word-level or grapheme-level reveal effects powered by Reanimated
 - reusable motion recipes instead of one-off animation props
 - accessible split text that screen readers read as one phrase
-- externally controlled progress for button, scroll, gesture, or focus-driven text motion
+- event-driven playback controls for replay/reset/stop without remounting
+- externally controlled raw progress for scroll, gesture, or synchronized text motion
 - a lightweight core package without Skia as a required dependency
 
 Wait for a later version if you need:
 
-- stable playback controls such as `play`, `pause`, `seek`, `reset`, or `reverse`
+- playback APIs such as `pause`, `seek`, or `reverse`
 - first-class scroll, gesture, or in-view drivers
 - precise line reveal, masked reveal, or token-to-line mapping
 - Skia effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text with links, selectable text, or full native `Text` layout parity
 - heavy use across long paragraphs, virtualized lists, or dense UI without your own performance validation
 
-Next focus: playback controls and drivers. Controlled shared-value progress is now the low-level primitive; future work should decide whether `play`, `pause`, `reset`, in-view, scroll, or gesture helpers are worth exposing on top of it. Line-aware effects and optional Skia renderers come after the native renderer, layout behavior, and performance envelope are more proven.
+Next focus: proving controls in real app flows, then deciding whether state-transition props, `pause`/`seek`/`reverse`, in-view helpers, scroll/gesture drivers, line-aware effects, or optional Skia renderers deserve first-class APIs.
 
 ## License
 

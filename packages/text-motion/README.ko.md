@@ -94,7 +94,7 @@ export function Header() {
 
 Custom `easing`처럼 function-valued option은 animation을 유지할지 다시 실행할지 판단할 때 reference로 비교합니다. Parent rerender에서도 progress를 유지하려면 같은 function reference를 재사용하거나 hoist하세요. 새 function을 만들면 motion config가 바뀐 것으로 보고 replay됩니다.
 
-`.motion()`은 uncontrolled autoplay만 설정합니다. Component에 `progress`를 넘기면 shared value는 앱에서 직접 Reanimated `withTiming`, `withSpring`, scroll, gesture, focus logic으로 움직여야 합니다.
+`.motion()`은 text-motion이 소유하는 playback에 적용됩니다. 기본 mount autoplay와 `controls` command에서 사용됩니다. Component에 raw `progress`를 넘기면 앱이 playback을 소유하므로 해당 instance에는 `.motion()`이 적용되지 않습니다.
 
 ## Presets
 
@@ -251,6 +251,7 @@ Built-in effect의 숫자 입력은 finite number여야 합니다. `rise({ y })`
 - `nativeID`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `controls`
 - `progress`
 - `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, `onAccessibilityAction`
 
@@ -279,20 +280,80 @@ const TestableReveal = defineTextMotion()
 
 Example app은 animation을 반복 확인하기 쉽도록 demo player를 remount할 수 있습니다. 이건 demo UI 동작이지, 앱에서 권장하는 public API 패턴은 아닙니다.
 
-### Controlled Progress
+### Playback Controls
 
-Text motion이 앱이 이미 제어하고 있는 상태를 따라가야 한다면 `progress`를 사용하세요.
+외부 이벤트가 text motion component에게 play, replay, reset, stop을 지시해야 한다면 `controls`를 사용하세요.
 
 자주 쓰이는 예시는 이런 경우입니다.
 
 - 버튼을 누른 뒤 headline이 reveal되어야 할 때
 - onboarding copy가 현재 step에 맞춰 진행되어야 할 때
 - screen focus를 받을 때 title을 다시 보여주고 싶을 때
-- scroll 또는 gesture shared value에 맞춰 text가 따라와야 할 때
 - form field가 valid가 된 뒤 label이 나타나야 할 때
-- 여러 UI 요소가 같은 shared progress value를 기준으로 함께 움직여야 할 때
+- hero title과 subtitle을 한 번에 replay하고 싶을 때
 
-이런 경우에는 text component가 언제 시작할지 결정하면 애매해집니다. 이미 앱이 적절한 순간을 알고 있으므로, 앱이 Reanimated shared value를 소유하고 text component에는 그 값을 넘깁니다.
+이런 경우 앱은 이벤트를 소유하고, text component는 실행 방식을 소유합니다. Component는 자기 recipe, timeline, effect, `.motion()` 설정으로 playback을 실행합니다.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  useTextMotionControls,
+  words,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const ReplayableReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(rise({ y: 12 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function Headline() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <ReplayableReveal controls={controls}>
+        Replay without remounting
+      </ReplayableReveal>
+
+      <Button title="Replay" onPress={controls.replay} />
+      <Button title="Reset" onPress={controls.reset} />
+    </>
+  );
+}
+```
+
+`controls`는 progress value가 아니라 command channel입니다.
+
+- `play()`는 현재 progress에서 final state로 이동합니다.
+- `replay()`는 initial state로 돌아간 뒤 timeline delay와 `.motion()`으로 다시 실행합니다.
+- `reset()`은 진행 중인 playback을 취소하고 initial state로 돌아갑니다.
+- `stop()`은 진행 중인 playback을 취소하고 현재 보이는 progress를 유지합니다.
+
+하나의 controls object를 여러 text motion component에 넘길 수 있습니다. 이 경우 command는 연결된 모든 component에 broadcast되고, 각 component는 자기 recipe로 command를 실행합니다.
+
+`controls`와 `progress`는 함께 사용할 수 없습니다. 버튼, screen focus처럼 불연속 이벤트에는 `controls`를 사용하고, scroll/gesture처럼 연속 값에 따라 움직여야 하면 `progress`를 사용하세요.
+
+Text Motion은 playback을 위한 context/provider API나 public component ref API를 제공하지 않습니다. 연결 관계가 JSX에서 보이도록 `controls={controls}`로 명시적으로 전달하세요.
+
+### Raw Progress
+
+Text motion이 앱이 이미 소유한 raw value를 따라가야 한다면 `progress`를 사용하세요.
+
+자주 쓰이는 예시는 이런 경우입니다.
+
+- scroll 또는 gesture shared value에 맞춰 text가 따라와야 할 때
+- 여러 UI 요소가 같은 shared progress value를 기준으로 함께 움직여야 할 때
+- 앱에서 직접 구성한 Reanimated sequence가 문장 전체를 `0`에서 `1`로 밀어야 할 때
+
+이런 경우에는 text component가 언제 시작할지 또는 어떤 curve로 움직일지 결정하지 않습니다. 앱이 Reanimated shared value를 소유하고 text component에는 그 값을 넘깁니다.
 
 ```tsx
 import {
@@ -306,7 +367,7 @@ import {
 import { Button } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
-const ControlledReveal = defineTextMotion()
+const ProgressReveal = defineTextMotion()
   .split(words())
   .layout(nativeText())
   .timeline(stagger(0.08))
@@ -318,9 +379,9 @@ export function Headline() {
 
   return (
     <>
-      <ControlledReveal progress={progress}>
+      <ProgressReveal progress={progress}>
         Progress drives the whole reveal
-      </ControlledReveal>
+      </ProgressReveal>
 
       <Button
         title="Play"
@@ -342,7 +403,7 @@ export function Headline() {
 
 `progress`는 단어 하나의 progress가 아니라 문장 전체의 progress라고 보면 됩니다. 예를 들어 `stagger(0.08)`을 쓰면 첫 번째 단어는 이미 끝났는데 뒤쪽 단어는 아직 따라오는 중일 수 있습니다. Renderer는 global shared value를 visible token별 local progress로 바꾸기 때문에 `stagger()`, `wave()`, `sequence()`, `parallel()`의 timing shape가 controlled mode에서도 유지됩니다. 공백은 계속 렌더링되지만 motion index를 소비하지 않습니다.
 
-`progress`가 있으면 component는 controlled mode가 되고 `.motion()`은 내부 autoplay를 시작하지 않습니다. Playback curve는 shared value를 업데이트하는 곳에서 정합니다.
+`progress`가 있으면 앱이 playback을 소유하고 `.motion()`은 내부 autoplay를 시작하지 않습니다. Playback curve는 shared value를 업데이트하는 곳에서 정합니다.
 
 ```tsx
 progress.value = withTiming(1, { duration: 720 });
@@ -350,11 +411,11 @@ progress.value = withSpring(1);
 progress.value = 0;
 ```
 
-이 rendered component에 `progress`를 넘기면 해당 instance에서는 `.motion()`이 적용되지 않습니다. 같은 recipe를 progress 없이 autoplay하는 uncontrolled version으로도 쓸 때만 `.motion()`을 추가하세요.
+이 rendered component에 `progress`를 넘기면 해당 instance에서는 `.motion()`이 적용되지 않습니다. Autoplay 또는 controls-driven version으로도 쓸 때만 `.motion()`을 추가하세요.
 
 중요한 제한도 있습니다. Controlled mode는 현재 whole-text progress mapping 안에서 fixed token timeline span `1.0`을 사용합니다. 실제로는 timeline delay가 각 token이 언제 시작할지 만들고, `withTiming` 또는 `withSpring`이 전체 문장이 `0`에서 `1`까지 얼마나 빠르게 움직일지를 정합니다. 나중에 controlled mode에서 token별 span 또는 duration 제어가 필요해진다면 `.motion()` duration을 몰래 빌려오는 방식이 아니라 별도 API로 설계하는 편이 안전합니다.
 
-Stable `play`, `pause`, `seek`, `reset`, `reverse`, screen focus, in-view, scroll, gesture driver는 아직 deferred입니다. 지금은 shared value를 직접 움직이면 됩니다.
+`pause`, `seek`, `reverse`, screen focus helper, in-view helper, scroll/gesture driver는 아직 deferred입니다.
 
 ## 접근성
 
@@ -385,6 +446,7 @@ React Native/Hermes 환경에서는 `Intl.Segmenter`가 항상 보장되지 않�
 - `nativeText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
 - `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`
+- 명시적인 `controls` prop과 `useTextMotionControls()` 기반 play/replay/reset/stop
 - external Reanimated shared value 기반 controlled `progress`
 - hidden animated token node를 사용하는 parent-label accessibility policy
 - `/presets` subpath recipe factories
@@ -403,11 +465,13 @@ Custom effect factory와 renderer capability factory는 MVP root API에서 의�
 - `scramble`
 - stable `overlayText`
 - Skia renderer 또는 Skia-only effects
-- `play`, `pause`, `seek`, `reset`, `reverse` 같은 controller playback API
+- `pause`, `seek`, `reverse` 같은 추가 playback API
 - first-class screen focus, in-view, scroll, gesture driver
 - RN-rendered line-to-token mapping
 
 Skia는 core package의 dependency가 아니라 future optional package boundary로 남겨둡니다.
+
+context/provider playback wiring과 public component ref playback은 deferred feature가 아닙니다. ownership이 숨겨지고 remount/lifecycle 동작을 잘못 사용하기 쉬워서 이 패키지의 API 방향에서 의도적으로 제외합니다. 하나 이상의 text component가 event-driven playback command에 반응해야 한다면 `controls={controls}`를 명시적으로 전달하세요.
 
 ## 지금 사용해도 될까?
 
@@ -418,20 +482,21 @@ Skia는 core package의 dependency가 아니라 future optional package boundary
 - hero title, section title, 짧은 label, onboarding copy, product description
 - `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`를 조합한 word/grapheme entrance motion
 - preset이나 `defineTextMotion()`으로 재사용 가능한 recipe component를 만들고 싶은 경우
+- component를 remount하지 않고 replay/reset/stop을 실행해야 하는 경우
 - external Reanimated shared value로 text motion progress를 직접 제어해야 하는 경우
 - 이미 Reanimated 4를 사용하고 Worklets 설정을 따를 수 있는 앱
 - 전체 문장은 한 번만 읽히고, animated token은 장식처럼 처리되어야 하는 accessible text motion
 
 다음 기능이 핵심이라면 이후 버전을 기다리는 편이 좋습니다.
 
-- `play`, `pause`, `seek`, `reset`, `reverse` 같은 stable playback API
+- `pause`, `seek`, `reverse` 같은 추가 playback API
 - scroll progress, gesture progress, viewport/in-view trigger를 first-class driver로 쓰는 기능
 - 정확한 line-level animation, clipping, masking, token별 line measurement
 - blur, glow, shader, mask, glyph distortion 같은 Skia-only visual effect
 - rich nested text, inline link, selectable text, native `Text`와 완전히 같은 동작
 - target app에서 성능 측정 없이 긴 문단이나 많은 animated row에 적용하는 경우
 
-다음 제품 초점은 playback control과 driver입니다. Controlled shared-value progress 위에 `play`, `pause`, `reset`, screen focus, in-view, scroll, gesture helper를 stable API로 올릴 가치가 있는지 판단해야 합니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
+다음 제품 초점은 실제 앱에서 controls API를 검증한 뒤, state-transition prop, `pause`/`seek`/`reverse`, screen focus helper, in-view helper, scroll/gesture driver를 first-class API로 올릴 가치가 있는지 판단하는 것입니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.
 
 ## 개발
 
