@@ -278,6 +278,8 @@ const TestableReveal = defineTextMotion()
 - whitespace/static token은 layout text를 보존하지만 animation하지 않고 motion index를 소비하지 않습니다.
 - `parentLabelPolicy({ reducedMotion: 'final-state' })`는 reduced-motion 사용자에게 initial animated state를 깜빡이지 않고 final style을 유지합니다.
 
+MVP의 text change는 enter-only입니다. 이전 text를 남겨서 exit animation, crossfade, token diff를 만들지는 않습니다. Component에 `controls`가 있으면 이후 command는 현재 렌더링된 text를 대상으로 동작합니다. Component에 `progress`가 있으면 앱이 소유한 shared value가 새 text의 시각 상태를 결정합니다. 예를 들어 `progress.value`가 `0.5`일 때 새 문장이 렌더링되면 autoplay를 시작하지 않고 그에 맞는 중간 상태로 보입니다.
+
 Example app은 animation을 반복 확인하기 쉽도록 demo player를 remount할 수 있습니다. 이건 demo UI 동작이지, 앱에서 권장하는 public API 패턴은 아닙니다.
 
 ### Playback Controls

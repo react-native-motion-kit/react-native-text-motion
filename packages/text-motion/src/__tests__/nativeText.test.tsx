@@ -316,6 +316,39 @@ describe('nativeText', () => {
     });
   });
 
+  it('replays changed text when the token shape changes', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .timeline(stagger(0.1))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 200 } })
+      .component();
+
+    const view = await render(<Reveal>One two</Reveal>);
+
+    jest.advanceTimersByTime(300);
+
+    await view.rerender(<Reveal>One two three</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('One');
+    expect(getHiddenToken('word-1')).toHaveTextContent(' ');
+    expect(getHiddenToken('word-2')).toHaveTextContent('two');
+    expect(getHiddenToken('word-3')).toHaveTextContent(' ');
+    expect(getHiddenToken('word-4')).toHaveTextContent('three');
+    expect(getHiddenToken('word-4')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(getHiddenToken('word-4')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
   it('restarts when effect options change without changing text', async () => {
     const Renderer = readTextMotionRendererDescriptor(
       nativeText({ testIDPrefix: 'word' }),
@@ -824,6 +857,39 @@ describe('nativeText', () => {
     });
   });
 
+  it('replays the current text when controls run after a text change', async () => {
+    const controls = createTextMotionControlsHandle();
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .motion({ kind: 'timing', options: { duration: 200 } })
+      .component();
+    const view = await render(<Reveal controls={controls}>Alpha</Reveal>);
+
+    jest.advanceTimersByTime(200);
+
+    await view.rerender(<Reveal controls={controls}>Bravo</Reveal>);
+    await act(async () => {
+      controls.replay();
+    });
+
+    const currentWord = getHiddenToken('word-0');
+
+    expect(currentWord).toHaveTextContent('Bravo');
+    expect(currentWord).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    jest.advanceTimersByTime(200);
+
+    expect(currentWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
   it('keeps controls subscriptions stable for dense grapheme text', async () => {
     const controls = createTextMotionControlsHandle();
     const descriptor = readTextMotionControlsDescriptor(controls);
@@ -1031,6 +1097,45 @@ describe('nativeText', () => {
 
     expect(progress.value).toBe(0.5);
     expect(getHiddenToken('word-0')).toHaveTextContent('Hello');
+  });
+
+  it('keeps changed text tied to app-owned progress values', async () => {
+    const progress = Reanimated.makeMutable(0);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+    const view = await render(<Reveal progress={progress}>Alpha</Reveal>);
+
+    await view.rerender(<Reveal progress={progress}>Bravo</Reveal>);
+    jest.advanceTimersByTime(200);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('Bravo');
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    progress.value = 0.5;
+
+    await view.rerender(<Reveal progress={progress}>Charlie</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('Charlie');
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+
+    progress.value = 1;
+
+    await view.rerender(<Reveal progress={progress}>Delta</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('Delta');
+    expect(getHiddenToken('word-0')).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
   });
 
   it('clamps negative controlled progress to the initial state', async () => {

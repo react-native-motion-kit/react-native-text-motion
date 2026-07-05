@@ -278,6 +278,8 @@ The default lifecycle is automatic and input-driven.
 - Whitespace/static tokens preserve layout text but do not animate or consume motion index.
 - `parentLabelPolicy({ reducedMotion: 'final-state' })` keeps reduced-motion users at the final style without flashing through the initial animated state.
 
+Text changes are enter-only in the MVP. The old text is not kept around for an exit animation, crossfade, or token diff. If a component has `controls`, later commands target the currently rendered text. If a component has `progress`, the app-owned shared value decides the new text's visual state; for example, a new phrase rendered while `progress.value` is `0.5` appears at the corresponding mid-state instead of starting autoplay.
+
 The example app may remount its demo player to make repeated inspection convenient. Treat that as demo UI behavior, not the recommended app API.
 
 ### Playback Controls
