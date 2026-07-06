@@ -133,6 +133,11 @@ type UncontrolledAnimatedNativeTextTokenProps = AnimatedTextProps & {
   tokenMotion: NativeTextTokenMotion;
 };
 
+type NativeTextAnimatedTokenContainerProps = Pick<
+  AnimatedTextProps,
+  'accessibilityElementsHidden' | 'accessible' | 'importantForAccessibility' | 'testID'
+>;
+
 type NativeTextContainerProps = Pick<
   TextMotionComponentTextProps,
   | 'accessibilityActions'
@@ -188,7 +193,7 @@ export type NativeTextRendererOptions = {
   testIDPrefix?: string;
 };
 
-const AnimatedText = createAnimatedComponent(Text) as ComponentType<AnimatedTextProps>;
+const AnimatedView = createAnimatedComponent(View);
 
 const TEXT_ALIGN_TO_JUSTIFY_CONTENT = {
   auto: 'flex-start',
@@ -217,6 +222,9 @@ const NATIVE_TEXT_BLANK_LINE_SPACER_STYLE = {
   width: '100%',
 } as const satisfies TextStyle;
 const NATIVE_TEXT_BLANK_LINE_SPACER_TEXT = ' ';
+const NATIVE_TEXT_ANIMATED_TOKEN_CONTAINER_STYLE = {
+  overflow: 'visible',
+} as const satisfies ViewStyle;
 
 const preserveStyleState: NativeTextStyleStateTransform = (state) => state;
 const preserveNumber: NativeTextNumberTransform = (value) => value;
@@ -669,6 +677,32 @@ function StaticNativeTextToken({ children, style, ...tokenProps }: AnimatedTextP
   );
 }
 
+function splitAnimatedTokenProps({
+  accessibilityElementsHidden,
+  accessible,
+  importantForAccessibility,
+  testID,
+  ...textProps
+}: AnimatedTextProps) {
+  return {
+    containerProps: {
+      accessibilityElementsHidden,
+      accessible,
+      importantForAccessibility,
+      testID,
+    } satisfies NativeTextAnimatedTokenContainerProps,
+    textProps,
+  };
+}
+
+function AnimatedNativeTextTokenContent({ children, style, ...tokenProps }: AnimatedTextProps) {
+  return (
+    <Text {...tokenProps} style={style}>
+      {children}
+    </Text>
+  );
+}
+
 function useNativeTextAnimatedStyle(options: NativeTextAnimatedStyleOptions) {
   const { controlled, progress, renderFinalState, tokenMotion } = options;
   const initialOpacity = tokenMotion.initial.opacity;
@@ -741,6 +775,7 @@ function ControlledAnimatedNativeTextToken({
   const reducedMotion = tokenMotion.reducedMotion;
   const reducedMotionEnabled = useReducedMotion();
   const renderFinalState = shouldRenderFinalState(reducedMotionEnabled, reducedMotion);
+  const { containerProps, textProps } = splitAnimatedTokenProps(tokenProps);
   const animatedStyle = useNativeTextAnimatedStyle({
     controlled: true,
     controlledProgressPlan,
@@ -750,9 +785,14 @@ function ControlledAnimatedNativeTextToken({
   });
 
   return (
-    <AnimatedText {...tokenProps} style={[style, animatedStyle] as StyleProp<TextStyle>}>
-      {children}
-    </AnimatedText>
+    <AnimatedView
+      {...containerProps}
+      style={[NATIVE_TEXT_ANIMATED_TOKEN_CONTAINER_STYLE, animatedStyle] as StyleProp<ViewStyle>}
+    >
+      <AnimatedNativeTextTokenContent {...textProps} style={style}>
+        {children}
+      </AnimatedNativeTextTokenContent>
+    </AnimatedView>
   );
 }
 
@@ -770,6 +810,7 @@ function UncontrolledAnimatedNativeTextToken({
   const progress = useSharedValue(renderFinalState ? 1 : 0);
   const playbackRun = createNativeTextPlaybackRun(tokenMotion, renderFinalState, playbackText);
   const previousPlaybackRun = useRef<NativeTextPlaybackRun | undefined>(undefined);
+  const { containerProps, textProps } = splitAnimatedTokenProps(tokenProps);
   const animatedStyle = useNativeTextAnimatedStyle({
     controlled: false,
     progress,
@@ -802,9 +843,14 @@ function UncontrolledAnimatedNativeTextToken({
   });
 
   return (
-    <AnimatedText {...tokenProps} style={[style, animatedStyle] as StyleProp<TextStyle>}>
-      {children}
-    </AnimatedText>
+    <AnimatedView
+      {...containerProps}
+      style={[NATIVE_TEXT_ANIMATED_TOKEN_CONTAINER_STYLE, animatedStyle] as StyleProp<ViewStyle>}
+    >
+      <AnimatedNativeTextTokenContent {...textProps} style={style}>
+        {children}
+      </AnimatedNativeTextTokenContent>
+    </AnimatedView>
   );
 }
 

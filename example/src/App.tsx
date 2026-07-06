@@ -325,6 +325,30 @@ const lineProbeCases: readonly LineProbeCase[] = [
     widthMode: 'comfortable',
   },
   {
+    id: 'blank-line',
+    label: 'Blank line',
+    text: 'one\n\ntwo',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'leading-newline',
+    label: 'Leading newline',
+    text: '\none two',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'trailing-newline',
+    label: 'Trailing newline',
+    text: 'one two\n',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'crlf-newline',
+    label: 'CRLF newline',
+    text: 'one\r\ntwo',
+    widthMode: 'comfortable',
+  },
+  {
     id: 'intl',
     label: 'Intl text',
     text: '한글 café 👨‍👩‍👧‍👦 שלום motion 文字',
@@ -915,6 +939,7 @@ function LineLayoutProbeDemo({ replaySignal }: { replaySignal: number }) {
       <View style={styles.lineProbeSection}>
         <Text style={styles.lineProbeSectionLabel}>Original text</Text>
         <Text style={styles.lineProbeOriginalText}>{probeCase.text}</Text>
+        <Text style={styles.lineProbeEscapedText}>{formatLineProbeText(probeCase.text)}</Text>
       </View>
 
       <View
@@ -1218,6 +1243,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     width: '100%',
+  },
+  lineProbeEscapedText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
   },
   lineProbeLineText: {
     color: '#475569',

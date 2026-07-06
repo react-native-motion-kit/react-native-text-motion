@@ -38,6 +38,17 @@ function queryHiddenToken(testID: string) {
   return screen.queryByTestId(testID, { includeHiddenElements: true });
 }
 
+function isNativeTestInstance(value: unknown): value is ReturnType<typeof getHiddenToken> {
+  return typeof value === 'object' && value !== null && 'children' in value && 'props' in value;
+}
+
+function getHiddenTokenText(testID: string) {
+  const token = getHiddenToken(testID);
+  const child = token.children.find(isNativeTestInstance);
+
+  return child ?? token;
+}
+
 function expectBlankLineSpacer(testID: string) {
   const spacer = getHiddenToken(testID);
 
@@ -299,8 +310,8 @@ describe('nativeText', () => {
     expect(screen.getByTestId('label')).toHaveAccessibleName('Custom accessible label');
     expect(screen.getByTestId('label')).toHaveProp('accessibilityRole', 'header');
     expect(screen.getByTestId('label')).toHaveProp('nativeID', 'custom-label');
-    expect(getHiddenToken('word-0')).toHaveProp('allowFontScaling', false);
-    expect(getHiddenToken('word-0')).toHaveProp('maxFontSizeMultiplier', 1.4);
+    expect(getHiddenTokenText('word-0')).toHaveProp('allowFontScaling', false);
+    expect(getHiddenTokenText('word-0')).toHaveProp('maxFontSizeMultiplier', 1.4);
   });
 
   it('animates token styles through Reanimated test utilities', async () => {
