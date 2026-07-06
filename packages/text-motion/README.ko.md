@@ -135,6 +135,12 @@ const WordReveal = defineTextMotion()
 
 `words()`는 spacing을 보존하기 위해 공백 token도 만듭니다. 하지만 공백은 timeline delay slot을 소비하지 않습니다. `"Words move as groups"`에서는 visible word만 motion index `0, 1, 2, 3`으로 계산됩니다.
 
+명시적인 newline도 layout에 보존됩니다. 예를 들어
+`"First line\nSecond line"`은 `nativeText()`에서 두 줄로 hard break되어
+렌더링되고, newline 자체는 여전히 motion index를 소비하지 않습니다. 이것은
+React Native가 화면 너비 때문에 자동 줄바꿈한 실제 줄을 측정하는 기능과는
+다릅니다.
+
 ### Graphemes
 
 ```tsx

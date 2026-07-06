@@ -149,6 +149,11 @@ export function Headline() {
 
 `nativeText()`는 transform-first token renderer입니다. React Native에서 transform effect가 실제로 보이도록 wrapping `View`와 animated `Text` token을 사용합니다. React Native `Text`의 완전한 drop-in 대체품은 아니며, `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
 
+직접 입력한 hard line break는 지원합니다. 예를 들어
+`"First line\nSecond line"`은 `nativeText()`에서 줄바꿈이 보존되어 렌더링되고,
+newline 자체는 motion index를 소비하지 않습니다. RN이 화면 너비 때문에 자동
+줄바꿈한 실제 줄을 token에 매핑하는 기능은 아직 deferred입니다.
+
 기본 playback은 lifecycle 기반입니다. mount되면 animated token이 자동 실행되고, 같은 text/recipe로 parent rerender가 일어나면 진행 중인 progress를 유지하며, text/effect/timeline/motion이 바뀌면 affected token animation을 다시 실행합니다. MVP에서 text change는 enter-only입니다. 이전 text를 남겨 exit animation, crossfade, token diff를 만들지는 않습니다. Component는 event-driven playback을 위한 `controls`와, raw external control을 위한 `progress`도 받습니다. `controls`는 현재 text에 대해 component recipe의 `.motion()`을 사용하고, `progress`는 앱이 소유하는 Reanimated `SharedValue<number>`가 변경된 text도 현재 shared value에 맞춰 제어합니다.
 
 Skia, stable line reveal, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다. Context/provider playback wiring과 public playback ref는 의도적으로 이 디자인에 포함하지 않습니다. Playback command에 반응해야 하는 component에는 `controls`를 명시적으로 전달하세요.

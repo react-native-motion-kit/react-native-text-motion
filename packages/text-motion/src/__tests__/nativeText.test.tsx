@@ -1,7 +1,9 @@
 import {
+  custom,
   defineTextMotion,
   fade,
   graphemes,
+  lines,
   nativeText,
   parentLabelPolicy,
   pulse,
@@ -30,6 +32,25 @@ import { createTextMotionRendererCapability } from '../types/renderer';
 
 function getHiddenToken(testID: string) {
   return screen.getByTestId(testID, { includeHiddenElements: true });
+}
+
+function queryHiddenToken(testID: string) {
+  return screen.queryByTestId(testID, { includeHiddenElements: true });
+}
+
+function expectBlankLineSpacer(testID: string) {
+  const spacer = getHiddenToken(testID);
+
+  expect(spacer).toHaveProp('children', ' ');
+  expect(spacer.props.style).toEqual(
+    expect.arrayContaining([expect.objectContaining({ flexBasis: '100%', opacity: 0 })]),
+  );
+}
+
+function expectZeroHeightLineBreak(testID: string) {
+  expect(getHiddenToken(testID).props.style).toEqual(
+    expect.objectContaining({ flexBasis: '100%', height: 0 }),
+  );
 }
 
 const DYNAMIC_FADE_TOKENS = readTextMotionSplitterDescriptor(words()).split('Hello motion');
@@ -141,6 +162,121 @@ describe('nativeText', () => {
     expect(getHiddenToken('word-0')).toHaveProp('importantForAccessibility', 'no-hide-descendants');
   });
 
+  it('renders hard newline separators as inaccessible line breaks', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal testID="headline">{'one\ntwo'}</Reveal>);
+
+    expect(screen.getByTestId('headline')).toHaveAccessibleName('one\ntwo');
+    expect(getHiddenToken('word-0')).toHaveTextContent('one');
+    expect(getHiddenToken('word-2')).toHaveTextContent('two');
+    expect(getHiddenToken('word-line-break-1')).toHaveProp('accessible', false);
+    expect(getHiddenToken('word-line-break-1')).toHaveProp('accessibilityElementsHidden', true);
+    expect(getHiddenToken('word-line-break-1')).toHaveProp(
+      'importantForAccessibility',
+      'no-hide-descendants',
+    );
+  });
+
+  it('preserves repeated hard newlines as separate line breaks', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal>{'one\n\ntwo'}</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('one');
+    expect(getHiddenToken('word-3')).toHaveTextContent('two');
+    expect(getHiddenToken('word-line-break-1')).toBeTruthy();
+    expect(getHiddenToken('word-line-break-2')).toBeTruthy();
+    expectZeroHeightLineBreak('word-line-break-1');
+    expectBlankLineSpacer('word-line-break-2');
+  });
+
+  it('preserves leading hard newlines as blank line spacers', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal>{'\none'}</Reveal>);
+
+    expectBlankLineSpacer('word-line-break-0');
+    expect(getHiddenToken('word-1')).toHaveTextContent('one');
+  });
+
+  it('preserves trailing hard newlines as blank line spacers', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal>{'one\n'}</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('one');
+    expectBlankLineSpacer('word-line-break-1');
+  });
+
+  it('treats CRLF as one hard line break', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal>{'one\r\ntwo'}</Reveal>);
+
+    expect(getHiddenToken('word-0')).toHaveTextContent('one');
+    expect(getHiddenToken('word-2')).toHaveTextContent('two');
+    expect(getHiddenToken('word-line-break-1')).toBeTruthy();
+    expect(queryHiddenToken('word-line-break-2')).toBeNull();
+  });
+
+  it('keeps line-break scaffolding inaccessible when token hiding is disabled', async () => {
+    const visibleTokenPolicy = {
+      hideTokensFromAccessibility: false,
+      kind: 'test-visible-token-policy',
+      parentLabel: true,
+      reducedMotion: 'system',
+    } as const;
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .accessibility(visibleTokenPolicy)
+      .effect(fade())
+      .component();
+
+    await render(<Reveal testID="headline">{'one\ntwo'}</Reveal>);
+
+    expect(screen.getByTestId('headline')).toHaveAccessibleName('one\ntwo');
+    expect(getHiddenToken('word-0')).not.toHaveProp('accessibilityElementsHidden', true);
+    expect(getHiddenToken('word-line-break-1')).toHaveProp('accessible', false);
+    expect(getHiddenToken('word-line-break-1')).toHaveProp('accessibilityElementsHidden', true);
+  });
+
+  it('keeps newline-only line splitter tokens compatible with nativeText rendering', async () => {
+    const Reveal = defineTextMotion()
+      .split(lines())
+      .layout(nativeText({ testIDPrefix: 'line' }))
+      .timeline(stagger(0.1))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal>{'First\nSecond'}</Reveal>);
+
+    expect(getHiddenToken('line-0')).toHaveTextContent('First');
+    expect(getHiddenToken('line-1')).toHaveTextContent('Second');
+    expect(getHiddenToken('line-line-break-1')).toHaveProp('accessible', false);
+  });
+
   it('forwards supported parent and token props intentionally', async () => {
     const Label = defineTextMotion()
       .split(words())
@@ -220,6 +356,32 @@ describe('nativeText', () => {
       .component();
 
     await render(<Reveal>One two three</Reveal>);
+
+    const secondWord = getHiddenToken('word-2');
+    const thirdWord = getHiddenToken('word-4');
+
+    jest.advanceTimersByTime(300);
+
+    expect(secondWord).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+    expect(thirdWord).toHaveAnimatedStyle({
+      opacity: 0.5,
+      transform: [{ translateX: 0 }, { translateY: 5 }, { scale: 1 }],
+    });
+  });
+
+  it('does not count hard newline tokens in timeline delays', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .timeline(stagger(0.1))
+      .effect(fade().and(rise({ y: 10 })))
+      .motion({ kind: 'timing', options: { duration: 200 } })
+      .component();
+
+    await render(<Reveal>{'One\ntwo three'}</Reveal>);
 
     const secondWord = getHiddenToken('word-2');
     const thirdWord = getHiddenToken('word-4');
@@ -993,6 +1155,38 @@ describe('nativeText', () => {
     await render(<Reveal controls={controls}> </Reveal>);
 
     expect(descriptor.getListenerCount()).toBe(0);
+  });
+
+  it('does not subscribe standalone hard newline fragments to controls', async () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal controls={controls}>{'One\nTwo'}</Reveal>);
+
+    expect(descriptor.getListenerCount()).toBe(2);
+    expect(getHiddenToken('word-line-break-1')).toHaveProp('accessible', false);
+  });
+
+  it('keeps embedded custom-token newline controls behavior explicit', async () => {
+    const controls = createTextMotionControlsHandle();
+    const descriptor = readTextMotionControlsDescriptor(controls);
+    const Reveal = defineTextMotion()
+      .split(custom((input) => [input]))
+      .layout(nativeText({ testIDPrefix: 'custom' }))
+      .effect(fade())
+      .component();
+
+    await render(<Reveal controls={controls}>{'One\nTwo'}</Reveal>);
+
+    expect(getHiddenToken('custom-0')).toHaveTextContent('One');
+    expect(getHiddenToken('custom-0-1')).toHaveTextContent('Two');
+    expect(getHiddenToken('custom-line-break-1')).toHaveProp('accessible', false);
+    expect(descriptor.getListenerCount()).toBe(2);
   });
 
   it('throws when controls and raw progress are provided together', async () => {

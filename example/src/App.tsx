@@ -25,10 +25,34 @@ import {
 } from '@react-native-motion-kit/text-motion/presets';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  type TextLayoutEventData,
+} from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
-type DemoGroupId = 'presets' | 'splitters' | 'effects' | 'timelines' | 'playback';
+import { readTextMotionSplitterDescriptor } from '../../packages/text-motion/src/recipe/descriptors';
+import {
+  createNativeTextLineLayoutProbeSnapshot,
+  createNativeTextLineLayoutSignature,
+  createNativeTextLineRanges,
+  evaluateNativeTextLineLayoutCompatibility,
+  groupNativeTextTokensByLineRanges,
+  recordNativeTextLineLayoutMeasurement,
+  type NativeTextLineLayoutInvalidationReason,
+  type NativeTextLineLayoutMeasurement,
+  type NativeTextLineLayoutProbeSnapshot,
+  type NativeTextRenderedLine,
+} from '../../packages/text-motion/src/renderers/nativeTextLineLayout';
+import { words as createInternalWordSplitter } from '../../packages/text-motion/src/split/words';
+
+type DemoGroupId = 'presets' | 'splitters' | 'effects' | 'timelines' | 'layout' | 'playback';
 
 type DemoGroup = {
   id: DemoGroupId;
@@ -193,6 +217,14 @@ const ControlsStressGraphemeText = defineTextMotion()
   .motion({ kind: 'timing', options: { duration: 260 } })
   .component();
 
+const LineProbeMotionText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.028))
+  .effect(rise({ y: 10 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 360 } })
+  .component();
+
 type ControlsStressCase = {
   Component: TextMotionComponent;
   id: string;
@@ -249,11 +281,69 @@ const controlsStressCases: readonly ControlsStressCase[] = [
   },
 ];
 
+type LineProbeCase = {
+  id: string;
+  label: string;
+  text: string;
+  widthMode: 'comfortable' | 'narrow';
+};
+
+type LineProbeLayoutInput = {
+  lineText: string;
+  measuredWidth: number;
+  styleMode: string;
+  text: string;
+};
+
+type LineProbeReport = {
+  detail: string;
+  lines: readonly {
+    id: string;
+    rangeLabel?: string;
+    text: string;
+  }[];
+  status: 'waiting' | 'go' | 'no-go' | 'unsupported';
+};
+
+const initialLineProbeReport: LineProbeReport = {
+  detail: 'Waiting for native text layout',
+  lines: [],
+  status: 'waiting',
+};
+
+const lineProbeCases: readonly LineProbeCase[] = [
+  {
+    id: 'repeated',
+    label: 'Repeated words',
+    text: 'move move move across a measured title',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'spacing',
+    label: 'Spaces + newline',
+    text: 'one  two   three\nfour five',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'intl',
+    label: 'Intl text',
+    text: '한글 café 👨‍👩‍👧‍👦 שלום motion 文字',
+    widthMode: 'comfortable',
+  },
+  {
+    id: 'wrap-risk',
+    label: 'Narrow wrap risk',
+    text: 'supercalifragilistic motion token boundary check',
+    widthMode: 'narrow',
+  },
+];
+
 const demoGroups: readonly DemoGroup[] = [
   { id: 'presets', title: 'Presets' },
   { id: 'splitters', title: 'Splitters' },
   { id: 'effects', title: 'Effects' },
   { id: 'timelines', title: 'Timelines' },
+  { id: 'layout', title: 'Layout' },
   { id: 'playback', title: 'Playback' },
 ];
 
@@ -403,6 +493,13 @@ const demos: readonly Demo[] = [
     title: 'Spring Motion',
   },
   {
+    caption: 'private onTextLayout probe / hard newline visual check',
+    groupId: 'layout',
+    id: 'line-layout-probe',
+    text: 'Measured line layout probe',
+    title: 'Line Layout Probe',
+  },
+  {
     caption: 'controls={controls}',
     groupId: 'playback',
     id: 'playback-controls',
@@ -439,6 +536,150 @@ function nextDemoIndex(index: number): number {
 
 function nextStressCaseIndex(index: number): number {
   return (index + 1) % controlsStressCases.length;
+}
+
+function nextLineProbeCaseIndex(index: number): number {
+  return (index + 1) % lineProbeCases.length;
+}
+
+function renderedLinesFromEvent(
+  event: NativeSyntheticEvent<TextLayoutEventData>,
+): readonly NativeTextRenderedLine[] {
+  return event.nativeEvent.lines.map((line, index) => ({
+    height: line.height,
+    index,
+    text: line.text,
+    width: line.width,
+    x: line.x,
+    y: line.y,
+  }));
+}
+
+function lineTextForSignature(renderedLines: readonly NativeTextRenderedLine[]): string {
+  return renderedLines.map((line) => line.text).join('\n');
+}
+
+function createLineProbeWordTokens(text: string) {
+  return readTextMotionSplitterDescriptor(createInternalWordSplitter()).split(text);
+}
+
+function formatLineProbeText(text: string): string {
+  return text.replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+}
+
+function resolveLineProbeInvalidationReason(
+  previous: LineProbeLayoutInput | undefined,
+  current: LineProbeLayoutInput,
+): NativeTextLineLayoutInvalidationReason {
+  if (!previous) {
+    return 'initial';
+  }
+
+  if (previous.text !== current.text) {
+    return 'text';
+  }
+
+  if (previous.measuredWidth !== current.measuredWidth) {
+    return 'width';
+  }
+
+  if (previous.styleMode !== current.styleMode) {
+    return 'style';
+  }
+
+  if (previous.lineText !== current.lineText) {
+    return 'line-text';
+  }
+
+  return 'line-text';
+}
+
+function reportFromMeasurement(
+  text: string,
+  renderedLines: readonly NativeTextRenderedLine[],
+): LineProbeReport {
+  const lineRanges = createNativeTextLineRanges(text, renderedLines);
+  const renderedLineItems = renderedLines.map((line) => ({
+    id: `${line.index}-${line.text}-${line.x}-${line.y}-${line.width}-${line.height}`,
+    text: formatLineProbeText(line.text),
+  }));
+
+  if (lineRanges.ok === false) {
+    return {
+      detail: lineRanges.reason,
+      lines: renderedLineItems,
+      status: 'unsupported',
+    };
+  }
+
+  const tokens = createLineProbeWordTokens(text);
+  const groups = groupNativeTextTokensByLineRanges(tokens, lineRanges.value);
+  const mappedLineItems = lineRanges.value.map((lineRange) => ({
+    id: `${lineRange.index}-${lineRange.sourceRange.start}-${lineRange.sourceRange.end}`,
+    rangeLabel: `${lineRange.sourceRange.start}-${lineRange.sourceRange.end}`,
+    text: formatLineProbeText(lineRange.text),
+  }));
+  const lineBreakRange = lineRanges.value.find((lineRange) => /[\r\n]/.test(lineRange.text));
+
+  if (lineBreakRange) {
+    return {
+      detail: `hard break renders; measured line ${lineBreakRange.index + 1} still carries \\n`,
+      lines: mappedLineItems,
+      status: 'no-go',
+    };
+  }
+
+  if (groups.ok === false) {
+    return {
+      detail: groups.reason,
+      lines: mappedLineItems,
+      status: 'unsupported',
+    };
+  }
+
+  const compatibility = evaluateNativeTextLineLayoutCompatibility(groups.value);
+
+  if (compatibility.status === 'no-go') {
+    return {
+      detail: `${compatibility.reason}: line ${compatibility.lineIndex + 1}`,
+      lines: mappedLineItems,
+      status: 'no-go',
+    };
+  }
+
+  return {
+    detail: `${compatibility.lineCount} lines / ${compatibility.tokenCount} tokens`,
+    lines: mappedLineItems,
+    status: 'go',
+  };
+}
+
+function createLineProbeStatusStyle(status: LineProbeReport['status']) {
+  if (status === 'go') {
+    return [styles.lineProbeStatus, styles.lineProbeStatusGo];
+  }
+
+  if (status === 'no-go') {
+    return [styles.lineProbeStatus, styles.lineProbeStatusNoGo];
+  }
+
+  if (status === 'unsupported') {
+    return [styles.lineProbeStatus, styles.lineProbeStatusUnsupported];
+  }
+
+  return [styles.lineProbeStatus, styles.lineProbeStatusWaiting];
+}
+
+function createStableSignatureLines(
+  renderedLines: readonly NativeTextRenderedLine[],
+): readonly NativeTextRenderedLine[] {
+  return renderedLines.map((line) => ({
+    ...line,
+    height: Math.round(line.height),
+    width: Math.round(line.width),
+    x: Math.round(line.x),
+    y: Math.round(line.y),
+  }));
 }
 
 function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
@@ -554,6 +795,210 @@ function ControlsStressDemo({ replaySignal }: { replaySignal: number }) {
   );
 }
 
+function LineLayoutProbeDemo({ replaySignal }: { replaySignal: number }) {
+  const controls = useTextMotionControls();
+  const [caseIndex, setCaseIndex] = useState(0);
+  const [compactWidth, setCompactWidth] = useState(false);
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const [probeReport, setProbeReport] = useState(initialLineProbeReport);
+  const snapshotRef = useRef<NativeTextLineLayoutProbeSnapshot>(
+    createNativeTextLineLayoutProbeSnapshot(),
+  );
+  const [probeSnapshot, setProbeSnapshot] = useState(snapshotRef.current);
+  const lastInputRef = useRef<LineProbeLayoutInput | undefined>(undefined);
+  const lastMeasurementRef = useRef<NativeTextLineLayoutMeasurement | undefined>(undefined);
+  const replaySignalRef = useRef(replaySignal);
+  const probeCase = lineProbeCases[caseIndex] ?? lineProbeCases[0];
+  const currentWidthMode = compactWidth ? 'narrow' : probeCase.widthMode;
+  const styleMode = currentWidthMode;
+  const lineProbeTextStyle =
+    currentWidthMode === 'narrow' ? styles.lineProbeNarrowText : styles.lineProbeMotionText;
+
+  function resetProbeCounters() {
+    const nextSnapshot = createNativeTextLineLayoutProbeSnapshot();
+
+    snapshotRef.current = nextSnapshot;
+    lastInputRef.current = undefined;
+    lastMeasurementRef.current = undefined;
+    setProbeSnapshot(nextSnapshot);
+    setProbeReport(initialLineProbeReport);
+  }
+
+  function applyMeasurement(
+    measurement: NativeTextLineLayoutMeasurement,
+    options: { renderDuplicate: boolean },
+  ) {
+    const update = recordNativeTextLineLayoutMeasurement(snapshotRef.current, measurement);
+
+    snapshotRef.current = update.snapshot;
+
+    if (update.accepted || options.renderDuplicate) {
+      setProbeSnapshot(update.snapshot);
+    }
+
+    return update;
+  }
+
+  function handleTextLayout(event: NativeSyntheticEvent<TextLayoutEventData>) {
+    const renderedLines = renderedLinesFromEvent(event);
+    const signatureLines = createStableSignatureLines(renderedLines);
+    const currentInput = {
+      lineText: lineTextForSignature(renderedLines),
+      measuredWidth,
+      styleMode,
+      text: probeCase.text,
+    };
+    const signature = createNativeTextLineLayoutSignature({
+      measuredWidth,
+      renderedLines: signatureLines,
+      style: [styles.motionText, lineProbeTextStyle],
+      text: probeCase.text,
+    });
+    const invalidationReason = resolveLineProbeInvalidationReason(
+      lastInputRef.current,
+      currentInput,
+    );
+    const measurement = {
+      invalidationReason,
+      lineCount: renderedLines.length,
+      signature,
+      tokenCount: createLineProbeWordTokens(probeCase.text).length,
+    };
+
+    lastInputRef.current = currentInput;
+    lastMeasurementRef.current = measurement;
+
+    const update = applyMeasurement(measurement, { renderDuplicate: false });
+
+    if (update.accepted) {
+      setProbeReport(reportFromMeasurement(probeCase.text, renderedLines));
+    }
+  }
+
+  function handleMeasureLayout(event: LayoutChangeEvent) {
+    const nextWidth = Math.round(event.nativeEvent.layout.width);
+
+    setMeasuredWidth((width) => (width === nextWidth ? width : nextWidth));
+  }
+
+  function repeatLastMeasurement() {
+    const lastMeasurement = lastMeasurementRef.current;
+
+    if (!lastMeasurement) {
+      return;
+    }
+
+    applyMeasurement(lastMeasurement, { renderDuplicate: true });
+  }
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    controls.replay();
+  }, [controls, replaySignal]);
+
+  return (
+    <View style={styles.lineProbeDemo}>
+      <View style={styles.lineProbeTopRow}>
+        <View style={styles.stageTitleGroup}>
+          <Text style={styles.stressMeta}>{probeCase.label}</Text>
+          <Text style={styles.stressMetaDetail}>{probeReport.detail}</Text>
+        </View>
+        <Text style={createLineProbeStatusStyle(probeReport.status)}>
+          {probeReport.status.toUpperCase()}
+        </Text>
+      </View>
+
+      <View style={styles.lineProbeSection}>
+        <Text style={styles.lineProbeSectionLabel}>Original text</Text>
+        <Text style={styles.lineProbeOriginalText}>{probeCase.text}</Text>
+      </View>
+
+      <View
+        onLayout={handleMeasureLayout}
+        style={[
+          styles.lineProbeTextBox,
+          currentWidthMode === 'narrow' && styles.lineProbeTextBoxNarrow,
+        ]}
+      >
+        <Text
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          onTextLayout={handleTextLayout}
+          style={[styles.motionText, lineProbeTextStyle, styles.lineProbeMeasurementText]}
+        >
+          {probeCase.text}
+        </Text>
+
+        <LineProbeMotionText controls={controls} style={[styles.motionText, lineProbeTextStyle]}>
+          {probeCase.text}
+        </LineProbeMotionText>
+      </View>
+
+      <View style={styles.lineProbeSection}>
+        <Text style={styles.lineProbeSectionLabel}>Measured lines mapped to source ranges</Text>
+        <View style={styles.lineProbeLines}>
+          {probeReport.lines.map((line, index) => (
+            <Text key={line.id} style={styles.lineProbeLineText}>
+              {index + 1}. [{line.rangeLabel ?? 'unmapped'}] {line.text}
+            </Text>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.lineProbeStats}>
+        <Text style={styles.lineProbeStatText}>layout calls {probeSnapshot.onTextLayoutCalls}</Text>
+        <Text style={styles.lineProbeStatText}>
+          accepted {probeSnapshot.acceptedMappingUpdates}
+        </Text>
+        <Text style={styles.lineProbeStatText}>
+          repeated {probeSnapshot.rejectedIdenticalPayloads}
+        </Text>
+        <Text style={styles.lineProbeStatText}>lines {probeSnapshot.lineCount}</Text>
+      </View>
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={controls.replay}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Replay</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={repeatLastMeasurement}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Same layout</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setCompactWidth((value) => !value);
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Width</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            resetProbeCounters();
+            setCaseIndex((index) => nextLineProbeCaseIndex(index));
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Case</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function ControlledProgressDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
   const progress = useSharedValue(0);
   const replaySignalRef = useRef(replaySignal);
@@ -615,6 +1060,7 @@ export default function App() {
   const controlsDemoSelected = demo.id === 'playback-controls';
   const controlsStressDemoSelected = demo.id === 'controls-stress';
   const controlledDemoSelected = demo.id === 'controlled-progress';
+  const lineLayoutProbeSelected = demo.id === 'line-layout-probe';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -624,7 +1070,7 @@ export default function App() {
           <Text style={styles.eyebrow}>@react-native-motion-kit/text-motion</Text>
           <Text style={styles.heading}>Motion player</Text>
           <Text style={styles.summary}>
-            Inspect every stable MVP case one at a time. Change case or replay without scrolling.
+            Inspect motion recipes, playback behavior, and private layout probes one case at a time.
           </Text>
         </View>
 
@@ -666,6 +1112,8 @@ export default function App() {
               <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : controlsStressDemoSelected ? (
               <ControlsStressDemo key={demo.id} replaySignal={replayKey} />
+            ) : lineLayoutProbeSelected ? (
+              <LineLayoutProbeDemo key={demo.id} replaySignal={replayKey} />
             ) : controlledDemoSelected ? (
               <ControlledProgressDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : (
@@ -765,6 +1213,114 @@ const styles = StyleSheet.create({
     fontSize: 27,
     fontWeight: '800',
     lineHeight: 33,
+  },
+  lineProbeDemo: {
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+  },
+  lineProbeLineText: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  lineProbeLines: {
+    gap: 3,
+    minHeight: 38,
+    width: '100%',
+  },
+  lineProbeMeasurementText: {
+    left: 0,
+    opacity: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  lineProbeMotionText: {
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  lineProbeNarrowText: {
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  lineProbeOriginalText: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  lineProbeSection: {
+    gap: 4,
+    maxWidth: 360,
+    width: '100%',
+  },
+  lineProbeSectionLabel: {
+    color: '#0f766e',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0,
+    lineHeight: 14,
+    textTransform: 'uppercase',
+  },
+  lineProbeStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  lineProbeStatText: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 6,
+    color: '#334155',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 15,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  lineProbeStatus: {
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 14,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  lineProbeStatusGo: {
+    backgroundColor: '#ccfbf1',
+    color: '#0f766e',
+  },
+  lineProbeStatusNoGo: {
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
+  },
+  lineProbeStatusUnsupported: {
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+  },
+  lineProbeStatusWaiting: {
+    backgroundColor: '#e2e8f0',
+    color: '#475569',
+  },
+  lineProbeTextBox: {
+    maxWidth: 360,
+    minHeight: 58,
+    position: 'relative',
+    width: '100%',
+  },
+  lineProbeTextBoxNarrow: {
+    maxWidth: 220,
+  },
+  lineProbeTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    maxWidth: 360,
+    width: '100%',
   },
   motionFrame: {
     alignItems: 'center',

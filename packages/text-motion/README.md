@@ -135,6 +135,11 @@ const WordReveal = defineTextMotion()
 
 `words()` preserves spacing tokens for rendering, but whitespace does not consume timeline delay slots. In `"Words move as groups"`, the visible words animate as indices `0, 1, 2, 3`.
 
+Explicit newline characters are preserved for layout too. For example,
+`"First line\nSecond line"` renders as two hard-broken visual lines with
+`nativeText()`, while the newline itself still does not consume a motion index.
+This is different from measuring automatic React Native line wrapping.
+
 ### Graphemes
 
 ```tsx

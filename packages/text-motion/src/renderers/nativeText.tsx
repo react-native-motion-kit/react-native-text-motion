@@ -156,6 +156,33 @@ type NativeTextTokenTextProps = Pick<
   'allowFontScaling' | 'maxFontSizeMultiplier'
 >;
 
+type NativeTextTextRenderFragment = {
+  kind: 'text';
+  key: string;
+  renderIndex: number;
+  text: string;
+  textFragmentIndex: number;
+  token: TextMotionToken;
+};
+
+type NativeTextLineBreakRenderFragment = {
+  kind: 'line-break';
+  key: string;
+  preservesLineHeight: boolean;
+  renderIndex: number;
+};
+
+type NativeTextRenderFragment = NativeTextTextRenderFragment | NativeTextLineBreakRenderFragment;
+
+type NativeTextTextRenderFragmentDraft = Omit<NativeTextTextRenderFragment, 'renderIndex'>;
+type NativeTextLineBreakRenderFragmentDraft = Omit<
+  NativeTextLineBreakRenderFragment,
+  'renderIndex'
+>;
+type NativeTextRenderFragmentDraft =
+  | NativeTextTextRenderFragmentDraft
+  | NativeTextLineBreakRenderFragmentDraft;
+
 export type NativeTextRendererOptions = {
   /** Prefix used for generated token `testID` values. */
   testIDPrefix?: string;
@@ -177,6 +204,19 @@ const DEFAULT_STYLE_STATE: NativeTextStyleState = {
   translateX: 0,
   translateY: 0,
 };
+
+const NATIVE_TEXT_LINE_BREAK_PATTERN = /\r\n|\n/g;
+const NATIVE_TEXT_LINE_BREAK_MARKER_STYLE = {
+  flexBasis: '100%',
+  height: 0,
+  width: '100%',
+} as const satisfies ViewStyle;
+const NATIVE_TEXT_BLANK_LINE_SPACER_STYLE = {
+  flexBasis: '100%',
+  opacity: 0,
+  width: '100%',
+} as const satisfies TextStyle;
+const NATIVE_TEXT_BLANK_LINE_SPACER_TEXT = ' ';
 
 const preserveStyleState: NativeTextStyleStateTransform = (state) => state;
 const preserveNumber: NativeTextNumberTransform = (value) => value;
@@ -436,6 +476,161 @@ function shouldRenderFinalState(
   return reducedMotionEnabled && reducedMotion !== 'system';
 }
 
+function createNativeTextTextFragment(
+  token: TextMotionToken,
+  text: string,
+  textFragmentIndex: number,
+): NativeTextTextRenderFragmentDraft {
+  return {
+    kind: 'text',
+    key: textFragmentIndex === 0 ? token.id : `${token.id}:text:${textFragmentIndex}`,
+    text,
+    textFragmentIndex,
+    token,
+  };
+}
+
+function createNativeTextLineBreakFragment(
+  token: TextMotionToken,
+  lineBreakIndex: number,
+  preservesLineHeight: boolean,
+): NativeTextLineBreakRenderFragmentDraft {
+  return {
+    kind: 'line-break',
+    key: `${token.id}:line-break:${lineBreakIndex}`,
+    preservesLineHeight,
+  };
+}
+
+function hasNativeTextLineContent(text: string): boolean {
+  return text.replace(NATIVE_TEXT_LINE_BREAK_PATTERN, '').length > 0;
+}
+
+function hasNativeTextLineContentAfter(sourceText: string, sourceIndex: number): boolean {
+  return hasNativeTextLineContent(sourceText.slice(sourceIndex));
+}
+
+function createNativeTextTokenRenderFragments(
+  token: TextMotionToken,
+  sourceText: string,
+  currentLineHasText: boolean,
+): {
+  currentLineHasText: boolean;
+  fragments: readonly NativeTextRenderFragmentDraft[];
+} {
+  if (!token.text.includes('\n')) {
+    return {
+      currentLineHasText: currentLineHasText || token.text.length > 0,
+      fragments: [createNativeTextTextFragment(token, token.text, 0)],
+    };
+  }
+
+  const lineBreaks = Array.from(token.text.matchAll(NATIVE_TEXT_LINE_BREAK_PATTERN));
+
+  const initialAccumulator = {
+    cursor: 0,
+    currentLineHasText,
+    fragments: [] as NativeTextRenderFragmentDraft[],
+    textFragmentIndex: 0,
+  };
+  const result = lineBreaks.reduce((accumulator, lineBreak, lineBreakIndex) => {
+    const start = lineBreak.index ?? accumulator.cursor;
+    const lineBreakEnd = start + lineBreak[0].length;
+    const textBeforeLineBreak = token.text.slice(accumulator.cursor, start);
+    const textFragment =
+      textBeforeLineBreak.length > 0
+        ? [createNativeTextTextFragment(token, textBeforeLineBreak, accumulator.textFragmentIndex)]
+        : [];
+    const lineHasText = accumulator.currentLineHasText || textBeforeLineBreak.length > 0;
+    const hasTextAfterLineBreak = hasNativeTextLineContentAfter(
+      sourceText,
+      token.sourceRange.start + lineBreakEnd,
+    );
+
+    return {
+      cursor: lineBreakEnd,
+      currentLineHasText: false,
+      fragments: [
+        ...accumulator.fragments,
+        ...textFragment,
+        createNativeTextLineBreakFragment(
+          token,
+          lineBreakIndex,
+          !lineHasText || !hasTextAfterLineBreak,
+        ),
+      ],
+      textFragmentIndex: accumulator.textFragmentIndex + textFragment.length,
+    };
+  }, initialAccumulator);
+  const trailingText = token.text.slice(result.cursor);
+
+  if (trailingText.length === 0) {
+    return {
+      currentLineHasText: result.currentLineHasText,
+      fragments: result.fragments,
+    };
+  }
+
+  return {
+    currentLineHasText: true,
+    fragments: [
+      ...result.fragments,
+      createNativeTextTextFragment(token, trailingText, result.textFragmentIndex),
+    ],
+  };
+}
+
+function createNativeTextRenderFragments(
+  tokens: readonly TextMotionToken[],
+  sourceText: string,
+): readonly NativeTextRenderFragment[] {
+  const result = tokens.reduce(
+    (accumulator, token) => {
+      const tokenResult = createNativeTextTokenRenderFragments(
+        token,
+        sourceText,
+        accumulator.currentLineHasText,
+      );
+
+      return {
+        currentLineHasText: tokenResult.currentLineHasText,
+        fragments: [...accumulator.fragments, ...tokenResult.fragments],
+      };
+    },
+    {
+      currentLineHasText: false,
+      fragments: [] as NativeTextRenderFragmentDraft[],
+    },
+  );
+
+  return result.fragments.map((fragment, renderIndex) => ({
+    ...fragment,
+    renderIndex,
+  }));
+}
+
+function createNativeTextFragmentTestID(
+  prefix: string | undefined,
+  fragment: NativeTextTextRenderFragment,
+): string | undefined {
+  if (!prefix) {
+    return undefined;
+  }
+
+  if (fragment.textFragmentIndex === 0) {
+    return `${prefix}-${fragment.token.index}`;
+  }
+
+  return `${prefix}-${fragment.token.index}-${fragment.textFragmentIndex}`;
+}
+
+function createNativeTextLineBreakTestID(
+  prefix: string | undefined,
+  fragment: NativeTextLineBreakRenderFragment,
+): string | undefined {
+  return prefix ? `${prefix}-line-break-${fragment.renderIndex}` : undefined;
+}
+
 function applyTokenDelay(animation: number, delayMs: number, reduceMotion: ReduceMotion): number {
   return delayMs > 0 ? withDelay(delayMs, animation, reduceMotion) : animation;
 }
@@ -645,6 +840,43 @@ function NativeTextToken(props: NativeTextTokenProps) {
   );
 }
 
+function NativeTextLineBreak({
+  preservesLineHeight,
+  testID,
+  textStyle,
+  tokenTextProps,
+}: {
+  preservesLineHeight: boolean;
+  testID?: string;
+  textStyle: StyleProp<TextStyle>;
+  tokenTextProps: NativeTextTokenTextProps;
+}) {
+  if (preservesLineHeight) {
+    return (
+      <Text
+        {...tokenTextProps}
+        accessibilityElementsHidden
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        style={[textStyle, NATIVE_TEXT_BLANK_LINE_SPACER_STYLE]}
+        testID={testID}
+      >
+        {NATIVE_TEXT_BLANK_LINE_SPACER_TEXT}
+      </Text>
+    );
+  }
+
+  return (
+    <View
+      accessibilityElementsHidden
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      style={NATIVE_TEXT_LINE_BREAK_MARKER_STYLE}
+      testID={testID}
+    />
+  );
+}
+
 function resolveJustifyContent(style: StyleProp<TextStyle>): ViewStyle['justifyContent'] {
   const textAlign = StyleSheet.flatten(style)?.textAlign;
 
@@ -706,6 +938,7 @@ function createNativeTextRendererComponent(
     const totalTimelineSpan = createNativeTextControlledTimelineSpan(delaySecondsByMotionIndex);
     const externalProgress = textProps?.progress;
     const controls = textProps?.controls;
+    const fragments = createNativeTextRenderFragments(tokens, text);
 
     if (externalProgress && controls) {
       throw new Error(
@@ -715,19 +948,32 @@ function createNativeTextRendererComponent(
 
     return (
       <View {...containerProps} style={createContainerStyle(textStyle)}>
-        {tokens.map((token) => {
+        {fragments.map((fragment) => {
+          if (fragment.kind === 'line-break') {
+            return (
+              <NativeTextLineBreak
+                key={fragment.key}
+                preservesLineHeight={fragment.preservesLineHeight}
+                testID={createNativeTextLineBreakTestID(options.testIDPrefix, fragment)}
+                textStyle={textStyle}
+                tokenTextProps={tokenTextProps}
+              />
+            );
+          }
+
+          const token = fragment.token;
           const motionIndex = motionIndexByTokenId.get(token.id);
           const commonTokenProps = {
             ...tokenAccessibilityProps,
             ...tokenTextProps,
             style: textStyle,
-            testID: options.testIDPrefix ? `${options.testIDPrefix}-${token.index}` : undefined,
+            testID: createNativeTextFragmentTestID(options.testIDPrefix, fragment),
           };
 
           if (typeof motionIndex !== 'number') {
             return (
-              <NativeTextToken {...commonTokenProps} key={token.id}>
-                {token.text}
+              <NativeTextToken {...commonTokenProps} key={fragment.key}>
+                {fragment.text}
               </NativeTextToken>
             );
           }
@@ -744,11 +990,11 @@ function createNativeTextRendererComponent(
               <NativeTextToken
                 {...commonTokenProps}
                 controls={controls}
-                key={token.id}
-                playbackText={token.text}
+                key={fragment.key}
+                playbackText={fragment.text}
                 tokenMotion={tokenMotion}
               >
-                {token.text}
+                {fragment.text}
               </NativeTextToken>
             );
           }
@@ -762,10 +1008,10 @@ function createNativeTextRendererComponent(
                 delaySecondsByMotionIndex,
                 totalTimelineSpan,
               )}
-              key={token.id}
+              key={fragment.key}
               tokenMotion={tokenMotion}
             >
-              {token.text}
+              {fragment.text}
             </NativeTextToken>
           );
         })}
