@@ -149,7 +149,11 @@ When `progress` is provided, `.motion()` does not run internal autoplay. Choose 
 - controlled progress via external Reanimated shared values
 - accessibility default: parent label plus hidden decorative token nodes
 
-`nativeText()` is a transform-first token renderer. It uses a wrapping `View` with animated `Text` tokens so transform effects are visible in React Native. It is not a full React Native `Text` drop-in, and layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
+`nativeText()` is a transform-first token renderer for titles, labels, onboarding copy, and short product copy. Animated tokens use an animated `View` container with an inner `Text` so transforms behave consistently across React Native platforms. Static tokens still render as plain `Text`. This makes `nativeText()` useful for split text motion, but it is not a full React Native `Text` drop-in. Layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
+
+When you pass `nativeText({ testIDPrefix })`, generated token `testID` values identify the animated token container. Text rendering props such as `allowFontScaling` and `maxFontSizeMultiplier` are forwarded to the inner `Text`. Treat this as testing and compatibility guidance, not as a styling extension API. Very long grapheme-by-grapheme animations create many native views and should be treated as stress cases until a dedicated performance checkpoint says otherwise.
+
+The example app includes `Playback -> Renderer Performance` for this checkpoint. Use it when deciding whether a workload is normal, caution, or stress for your target devices. A threshold should be called `measured` only after the same case family has iOS and Android evidence. One-platform, simulator-only, emulator-only, or dev-mode-only checks should be treated as `provisional`; untested cases stay `unknown`.
 
 Manual hard line breaks are supported: text such as `"First line\nSecond line"` keeps
 the newline as a visual break in `nativeText()`, and the newline does not consume a

@@ -35,7 +35,7 @@ import {
   type NativeSyntheticEvent,
   type TextLayoutEventData,
 } from 'react-native';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 
 import { readTextMotionSplitterDescriptor } from '../../packages/text-motion/src/recipe/descriptors';
 import {
@@ -217,6 +217,37 @@ const ControlsStressGraphemeText = defineTextMotion()
   .motion({ kind: 'timing', options: { duration: 260 } })
   .component();
 
+const RendererProbeFadeWordsText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.018))
+  .effect(fade({ from: 0.04 }))
+  .motion({ kind: 'timing', options: { duration: 260 } })
+  .component();
+
+const RendererProbeRiseWordsText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.014))
+  .effect(rise({ y: 8 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 300 } })
+  .component();
+
+const RendererProbeScaleGraphemeText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.005))
+  .effect(scale({ from: 0.94 }).and(fade()))
+  .motion({ kind: 'timing', options: { duration: 240 } })
+  .component();
+
+const RendererProbeProgressText = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.018))
+  .effect(rise({ y: 8 }).and(fade()))
+  .component();
+
 const LineProbeMotionText = defineTextMotion()
   .split(words())
   .layout(nativeText())
@@ -278,6 +309,116 @@ const controlsStressCases: readonly ControlsStressCase[] = [
       'Rows should stay responsive',
     ],
     tokenNote: '8 components, 33 word tokens',
+  },
+];
+
+type RendererProbePlaybackMode = 'autoplay' | 'controls' | 'progress';
+type RendererProbeThreshold = 'normal' | 'caution' | 'stress';
+type RendererProbeControls = Pick<ReturnType<typeof useTextMotionControls>, 'replay'>;
+type RendererProbeAutoplaySetter = (update: (run: number) => number) => void;
+
+type RendererProbeCase = {
+  Component: TextMotionComponent;
+  effectProfile: string;
+  id: string;
+  label: string;
+  motionTokenCount: number;
+  playbackMode: RendererProbePlaybackMode;
+  splitLabel: string;
+  threshold: RendererProbeThreshold;
+} & (
+  | {
+      rows?: never;
+      text: string;
+    }
+  | {
+      rows: readonly string[];
+      text?: never;
+    }
+);
+
+const rendererProbeWordText =
+  'Measure native text renderer replay across concise product titles smoothly';
+const rendererProbeLongWordText =
+  'Native text motion should stay readable while this example checks around fifty visible word tokens across replay controls product copy onboarding labels title rhythm renderer pressure measurement smoothness practical threshold guidance without changing public API behavior for users who build polished React Native interfaces today across screens every day reliably';
+const rendererProbeGraphemeText = 'MotionKit'.repeat(6);
+const rendererProbeHeavyGraphemeText = 'ControlStress'.repeat(10);
+
+const rendererProbeCases: readonly RendererProbeCase[] = [
+  {
+    Component: RendererProbeFadeWordsText,
+    effectProfile: 'fade',
+    id: 'words-10-autoplay',
+    label: 'Words 10 autoplay',
+    motionTokenCount: 10,
+    playbackMode: 'autoplay',
+    splitLabel: 'words()',
+    text: rendererProbeWordText,
+    threshold: 'normal',
+  },
+  {
+    Component: RendererProbeRiseWordsText,
+    effectProfile: 'rise + fade',
+    id: 'words-50-controls',
+    label: 'Words 50 replay',
+    motionTokenCount: 50,
+    playbackMode: 'controls',
+    splitLabel: 'words()',
+    text: rendererProbeLongWordText,
+    threshold: 'caution',
+  },
+  {
+    Component: RendererProbeScaleGraphemeText,
+    effectProfile: 'scale + fade',
+    id: 'graphemes-54-controls',
+    label: 'Graphemes 54 replay',
+    motionTokenCount: 54,
+    playbackMode: 'controls',
+    splitLabel: 'graphemes()',
+    text: rendererProbeGraphemeText,
+    threshold: 'caution',
+  },
+  {
+    Component: RendererProbeScaleGraphemeText,
+    effectProfile: 'scale + fade',
+    id: 'graphemes-130-controls',
+    label: 'Graphemes 130 replay',
+    motionTokenCount: 130,
+    playbackMode: 'controls',
+    splitLabel: 'graphemes()',
+    text: rendererProbeHeavyGraphemeText,
+    threshold: 'stress',
+  },
+  {
+    Component: RendererProbeRiseWordsText,
+    effectProfile: 'rise + fade',
+    id: 'shared-rows-controls',
+    label: 'Shared rows replay',
+    motionTokenCount: 35,
+    playbackMode: 'controls',
+    rows: [
+      'Replay several native rows',
+      'Watch UI FPS while tapping',
+      'Each row owns token wrappers',
+      'Controls fan out together',
+      'Use this as a stress check',
+      'Keep labels responsive',
+      'No public API changes',
+      'Record visible jank clearly',
+    ],
+    splitLabel: 'words()',
+    threshold: 'caution',
+  },
+  {
+    Component: RendererProbeProgressText,
+    effectProfile: 'rise + fade',
+    id: 'words-50-progress',
+    label: 'Words 50 progress',
+    motionTokenCount: 50,
+    playbackMode: 'progress',
+    splitLabel: 'words()',
+    text: rendererProbeLongWordText,
+    threshold: 'caution',
   },
 ];
 
@@ -538,6 +679,13 @@ const demos: readonly Demo[] = [
     title: 'Controls Stress',
   },
   {
+    caption: 'nativeText performance threshold probe',
+    groupId: 'playback',
+    id: 'renderer-performance-probe',
+    text: 'Renderer performance probe',
+    title: 'Renderer Performance',
+  },
+  {
     caption: 'progress={sharedValue}',
     groupId: 'playback',
     id: 'controlled-progress',
@@ -560,6 +708,10 @@ function nextDemoIndex(index: number): number {
 
 function nextStressCaseIndex(index: number): number {
   return (index + 1) % controlsStressCases.length;
+}
+
+function nextRendererProbeCaseIndex(index: number): number {
+  return (index + 1) % rendererProbeCases.length;
 }
 
 function nextLineProbeCaseIndex(index: number): number {
@@ -694,6 +846,54 @@ function createLineProbeStatusStyle(status: LineProbeReport['status']) {
   return [styles.lineProbeStatus, styles.lineProbeStatusWaiting];
 }
 
+function createRendererProbeThresholdStyle(threshold: RendererProbeThreshold) {
+  if (threshold === 'normal') {
+    return [styles.rendererProbeBadge, styles.rendererProbeBadgeNormal];
+  }
+
+  if (threshold === 'caution') {
+    return [styles.rendererProbeBadge, styles.rendererProbeBadgeCaution];
+  }
+
+  return [styles.rendererProbeBadge, styles.rendererProbeBadgeStress];
+}
+
+function formatRendererProbeMode(mode: RendererProbePlaybackMode): string {
+  if (mode === 'autoplay') {
+    return 'mount autoplay';
+  }
+
+  if (mode === 'controls') {
+    return 'controls replay';
+  }
+
+  return 'external progress';
+}
+
+function createRendererProbeNodeEstimate(motionTokenCount: number): string {
+  return `${motionTokenCount} wrappers / ${motionTokenCount * 2} animated token nodes`;
+}
+
+function runRendererProbePlayback(
+  mode: RendererProbePlaybackMode,
+  controls: RendererProbeControls,
+  progress: SharedValue<number>,
+  setAutoplayRun: RendererProbeAutoplaySetter,
+) {
+  if (mode === 'autoplay') {
+    setAutoplayRun((run) => run + 1);
+    return;
+  }
+
+  if (mode === 'progress') {
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 720 });
+    return;
+  }
+
+  controls.replay();
+}
+
 function createStableSignatureLines(
   renderedLines: readonly NativeTextRenderedLine[],
 ): readonly NativeTextRenderedLine[] {
@@ -809,6 +1009,122 @@ function ControlsStressDemo({ replaySignal }: { replaySignal: number }) {
           accessibilityRole="button"
           onPress={() => {
             setCaseIndex((index) => nextStressCaseIndex(index));
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Case</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function RendererPerformanceProbeDemo({ replaySignal }: { replaySignal: number }) {
+  const controls = useTextMotionControls();
+  const progress = useSharedValue(0);
+  const [caseIndex, setCaseIndex] = useState(0);
+  const [autoplayRun, setAutoplayRun] = useState(0);
+  const replaySignalRef = useRef(replaySignal);
+  const probeCase = rendererProbeCases[caseIndex] ?? rendererProbeCases[0];
+  const ProbeText = probeCase.Component;
+  const probeRows = probeCase.rows;
+  const playbackMode = probeCase.playbackMode;
+  const thresholdStyle = createRendererProbeThresholdStyle(probeCase.threshold);
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    runRendererProbePlayback(playbackMode, controls, progress, setAutoplayRun);
+  }, [controls, playbackMode, progress, replaySignal]);
+
+  return (
+    <View style={styles.rendererProbeDemo}>
+      <View style={styles.rendererProbeHeader}>
+        <View style={styles.rendererProbeTitleGroup}>
+          <Text style={styles.stressMeta}>{probeCase.label}</Text>
+          <Text style={styles.stressMetaDetail}>
+            {probeCase.splitLabel} / {probeCase.effectProfile} /{' '}
+            {formatRendererProbeMode(playbackMode)}
+          </Text>
+        </View>
+        <Text style={thresholdStyle}>{probeCase.threshold.toUpperCase()}</Text>
+      </View>
+
+      <View style={styles.rendererProbeStats}>
+        <Text style={styles.lineProbeStatText}>{probeCase.motionTokenCount} motion tokens</Text>
+        <Text style={styles.lineProbeStatText}>
+          {createRendererProbeNodeEstimate(probeCase.motionTokenCount)}
+        </Text>
+      </View>
+
+      {probeRows ? (
+        <View style={styles.stressRows}>
+          {probeRows.map((rowText) => (
+            <ProbeText
+              controls={controls}
+              key={rowText}
+              style={[styles.motionText, styles.rendererProbeRowText]}
+            >
+              {rowText}
+            </ProbeText>
+          ))}
+        </View>
+      ) : playbackMode === 'progress' ? (
+        <ProbeText progress={progress} style={[styles.motionText, styles.rendererProbeMotionText]}>
+          {probeCase.text}
+        </ProbeText>
+      ) : (
+        <ProbeText
+          controls={playbackMode === 'controls' ? controls : undefined}
+          key={`${probeCase.id}-${autoplayRun}`}
+          style={[styles.motionText, styles.rendererProbeMotionText]}
+        >
+          {probeCase.text}
+        </ProbeText>
+      )}
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            runRendererProbePlayback(playbackMode, controls, progress, setAutoplayRun);
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Replay</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            if (playbackMode === 'progress') {
+              progress.value = 0;
+              return;
+            }
+
+            controls.reset();
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Reset</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            const nextCaseIndex = nextRendererProbeCaseIndex(caseIndex);
+            const nextCase = rendererProbeCases[nextCaseIndex] ?? rendererProbeCases[0];
+
+            setCaseIndex(nextCaseIndex);
+            progress.value = 0;
+
+            if (nextCase.playbackMode === 'progress') {
+              progress.value = withTiming(1, { duration: 720 });
+              return;
+            }
+
+            setAutoplayRun((run) => run + 1);
           }}
           style={styles.progressButton}
         >
@@ -1086,6 +1402,7 @@ export default function App() {
   const controlsStressDemoSelected = demo.id === 'controls-stress';
   const controlledDemoSelected = demo.id === 'controlled-progress';
   const lineLayoutProbeSelected = demo.id === 'line-layout-probe';
+  const rendererPerformanceProbeSelected = demo.id === 'renderer-performance-probe';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -1137,6 +1454,8 @@ export default function App() {
               <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : controlsStressDemoSelected ? (
               <ControlsStressDemo key={demo.id} replaySignal={replayKey} />
+            ) : rendererPerformanceProbeSelected ? (
+              <RendererPerformanceProbeDemo key={demo.id} replaySignal={replayKey} />
             ) : lineLayoutProbeSelected ? (
               <LineLayoutProbeDemo key={demo.id} replaySignal={replayKey} />
             ) : controlledDemoSelected ? (
@@ -1409,6 +1728,60 @@ const styles = StyleSheet.create({
     gap: 8,
     maxWidth: 360,
     width: '100%',
+  },
+  rendererProbeBadge: {
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 14,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rendererProbeBadgeCaution: {
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+  },
+  rendererProbeBadgeNormal: {
+    backgroundColor: '#ccfbf1',
+    color: '#0f766e',
+  },
+  rendererProbeBadgeStress: {
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
+  },
+  rendererProbeDemo: {
+    alignItems: 'center',
+    gap: 14,
+    width: '100%',
+  },
+  rendererProbeHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    maxWidth: 360,
+    width: '100%',
+  },
+  rendererProbeMotionText: {
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  rendererProbeRowText: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  rendererProbeStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    maxWidth: 360,
+  },
+  rendererProbeTitleGroup: {
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: 2,
   },
   screen: {
     backgroundColor: '#eef3f8',

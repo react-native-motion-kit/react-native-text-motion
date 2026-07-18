@@ -147,7 +147,11 @@ export function Headline() {
 - external Reanimated shared value 기반 controlled progress
 - accessibility default: parent label plus hidden decorative token nodes
 
-`nativeText()`는 transform-first token renderer입니다. React Native에서 transform effect가 실제로 보이도록 wrapping `View`와 animated `Text` token을 사용합니다. React Native `Text`의 완전한 drop-in 대체품은 아니며, `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
+`nativeText()`는 title, label, onboarding copy, 짧은 product copy를 위한 transform-first token renderer입니다. Animated token은 React Native 플랫폼에서 transform이 안정적으로 보이도록 animated `View` container와 내부 `Text`로 렌더링됩니다. Static token은 그대로 plain `Text`로 렌더링됩니다. 그래서 `nativeText()`는 split text motion에는 적합하지만 React Native `Text`의 완전한 drop-in 대체품은 아닙니다. `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
+
+`nativeText({ testIDPrefix })`를 사용하면 generated token `testID`는 animated token container를 가리킵니다. `allowFontScaling`, `maxFontSizeMultiplier`처럼 text rendering에 영향을 주는 prop은 내부 `Text`로 전달됩니다. 이 내용은 테스트와 compatibility를 위한 안내이지, token을 직접 스타일링하기 위한 확장 API가 아닙니다. 매우 긴 문장을 grapheme 단위로 애니메이션하면 native view가 많이 생기므로, 별도 performance checkpoint 전까지는 stress case로 봐야 합니다.
+
+Example app에는 이 checkpoint를 위한 `Playback -> Renderer Performance` 케이스가 있습니다. Target device에서 어떤 workload를 normal, caution, stress로 볼지 판단할 때 사용하세요. 같은 case family를 iOS와 Android에서 모두 확인했을 때만 `measured`라고 부르고, 한 플랫폼만 확인했거나 simulator/emulator/dev mode만 확인했다면 `provisional`로 남깁니다. 아직 확인하지 않은 케이스는 `unknown`입니다.
 
 직접 입력한 hard line break는 지원합니다. 예를 들어
 `"First line\nSecond line"`은 `nativeText()`에서 줄바꿈이 보존되어 렌더링되고,

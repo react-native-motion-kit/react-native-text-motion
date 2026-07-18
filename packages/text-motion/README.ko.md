@@ -141,6 +141,13 @@ const WordReveal = defineTextMotion()
 React Native가 화면 너비 때문에 자동 줄바꿈한 실제 줄을 측정하는 기능과는
 다릅니다.
 
+`nativeText()`는 title, label, onboarding copy, 짧은 product copy의 split
+motion을 위한 renderer입니다. Animated token은 animated container와 내부
+`Text`로 렌더링됩니다. Generated token `testID`는 그 container를 가리키고,
+`allowFontScaling` 같은 text rendering prop은 내부 `Text`로 전달됩니다.
+React Native `Text`의 완전한 drop-in 대체품은 아니며, 매우 긴 grapheme
+animation은 아직 stable performance promise가 아니라 stress case입니다.
+
 ### Graphemes
 
 ```tsx
@@ -244,7 +251,7 @@ Built-in effect의 숫자 입력은 finite number여야 합니다. `rise({ y })`
 
 ## Native Renderer Contract
 
-`nativeText()`는 stable MVP renderer입니다. React Native에서 `rise()`, `slide()`, `scale()`, `pulse()` 같은 transform effect가 실제로 보이도록 wrapping `View`와 animated `Text` token을 사용합니다.
+`nativeText()`는 stable MVP renderer입니다. Animated token은 React Native에서 `rise()`, `slide()`, `scale()`, `pulse()` 같은 transform effect가 실제로 보이도록 animated `View` container와 내부 `Text`로 렌더링됩니다. Static token은 그대로 plain `Text`로 렌더링됩니다.
 
 `nativeText()`는 `.layout(...)`에 전달하는 opaque renderer handle을 반환합니다. `kind`, `capabilities`, 구현 `Component` 같은 descriptor field는 root 사용자 API에서 숨깁니다.
 
@@ -263,7 +270,7 @@ Built-in effect의 숫자 입력은 finite number여야 합니다. `rise({ y })`
 
 단일 native text node가 필요한 layout/interaction prop은 stable MVP 계약에 포함되지 않습니다. 예: `numberOfLines`, `ellipsizeMode`, `lineBreakMode`, `onTextLayout`, `selectable`, text `onPress`.
 
-테스트에서 token별 `testID`가 필요하면 `nativeText({ testIDPrefix: 'word' })`를 사용하세요.
+테스트에서 token별 `testID`가 필요하면 `nativeText({ testIDPrefix: 'word' })`를 사용하세요. Generated token `testID`는 animated token container를 가리키고, `allowFontScaling`, `maxFontSizeMultiplier` 같은 text rendering prop은 내부 `Text`로 전달됩니다.
 
 ```tsx
 const TestableReveal = defineTextMotion()
@@ -272,6 +279,20 @@ const TestableReveal = defineTextMotion()
   .effect(fade())
   .component();
 ```
+
+### Renderer Performance Thresholds
+
+`nativeText()`는 title, label, onboarding copy, product copy처럼 사용자가 token motion을 실제로 볼 수 있는 UI text를 위한 기본 renderer입니다. 긴 문단이나 수백 개의 grapheme token을 비용 없이 처리하는 renderer로 설계한 것은 아닙니다.
+
+Example app에는 실제 경계를 확인하기 위한 `Playback -> Renderer Performance` probe가 있습니다. Word, grapheme, shared-row, replay, progress 케이스를 포함합니다. React Native Perf Monitor, Flashlight, Xcode Instruments, Android Studio profiler처럼 FPS를 확인할 수 있는 도구와 함께 사용하세요.
+
+결과를 기록할 때는 이 용어를 사용합니다.
+
+- `measured`: 같은 case family를 iOS와 Android에서 모두 확인한 상태
+- `provisional`: 한 플랫폼만 확인했거나 simulator/emulator/dev mode만 확인한 상태
+- `unknown`: 아직 측정하지 않은 상태
+
+판단 기준은 보수적으로 잡습니다. 일반적인 title, label, product copy workload가 부드럽다면 `nativeText()`를 default renderer로 유지하고, grapheme-heavy boundary는 문서 가이드로 남깁니다. 일반 workload도 끊긴다면 새 effect를 추가하기 전에 renderer optimization 계획을 먼저 세웁니다. Stress grapheme case만 실패한다면 default renderer가 틀렸다는 증거로 보지 않고 stress boundary로 문서화합니다.
 
 ## Playback Lifecycle
 
@@ -351,7 +372,7 @@ export function Headline() {
 
 Text Motion은 playback을 위한 context/provider API나 public component ref API를 제공하지 않습니다. 연결 관계가 JSX에서 보이도록 `controls={controls}`로 명시적으로 전달하세요.
 
-성능 관점에서 `controls`는 짧은 UI 텍스트에 맞춰 설계되어 있습니다. Title, label, 짧은 product sentence라면 playback work가 작고 예측 가능합니다. 긴 문단, 많은 row, 글자 단위로 쪼개는 grapheme split 텍스트에 쓰려면 example의 stress case를 확인하고 target device에서 먼저 측정하세요.
+성능 관점에서 `controls`는 짧은 UI 텍스트에 맞춰 설계되어 있습니다. Title, label, 짧은 product sentence라면 playback work가 작고 예측 가능합니다. 긴 문단, 많은 row, 글자 단위로 쪼개는 grapheme split 텍스트에 쓰려면 example의 `Renderer Performance` probe를 확인하고 target device에서 먼저 측정하세요.
 
 큰 workload가 중요해지면 renderer 내부 구현은 바뀔 수 있습니다. 그래서 example stress case는 controls 구현 방식에 대한 public promise가 아니라 profiling aid로 보는 편이 안전합니다.
 

@@ -140,6 +140,13 @@ Explicit newline characters are preserved for layout too. For example,
 `nativeText()`, while the newline itself still does not consume a motion index.
 This is different from measuring automatic React Native line wrapping.
 
+`nativeText()` is meant for split motion in titles, labels, onboarding copy, and
+short product copy. Animated tokens use an animated container with an inner
+`Text`; generated token `testID` values identify that container, while text
+rendering props such as `allowFontScaling` are forwarded to the inner `Text`.
+It is not a full React Native `Text` drop-in, and very long grapheme animations
+remain a stress case rather than a stable performance promise.
+
 ### Graphemes
 
 ```tsx
@@ -243,7 +250,7 @@ Numeric built-in effect inputs must be finite numbers. Negative offsets are allo
 
 ## Native Renderer Contract
 
-`nativeText()` is the stable MVP renderer. It uses a wrapping `View` with animated `Text` tokens so transform effects such as `rise()`, `slide()`, `scale()`, and `pulse()` are visible in React Native.
+`nativeText()` is the stable MVP renderer. Animated tokens use an animated `View` container with an inner `Text` so transform effects such as `rise()`, `slide()`, `scale()`, and `pulse()` are visible in React Native. Static tokens still render as plain `Text`.
 
 `nativeText()` returns an opaque renderer handle for `.layout(...)`. Descriptor fields such as `kind`, `capabilities`, and the implementation `Component` are intentionally hidden from the root user API.
 
@@ -262,7 +269,7 @@ Components created with `nativeText()` intentionally support a narrow prop surfa
 
 Layout and interaction props that require a single native text node are not part of the stable MVP contract. This includes `numberOfLines`, `ellipsizeMode`, `lineBreakMode`, `onTextLayout`, `selectable`, and text `onPress` handlers.
 
-Use `nativeText({ testIDPrefix: 'word' })` when tests need stable per-token `testID` values:
+Use `nativeText({ testIDPrefix: 'word' })` when tests need stable per-token `testID` values. Generated token `testID` values identify the animated token container, while text rendering props such as `allowFontScaling` and `maxFontSizeMultiplier` are forwarded to the inner `Text`:
 
 ```tsx
 const TestableReveal = defineTextMotion()
@@ -271,6 +278,20 @@ const TestableReveal = defineTextMotion()
   .effect(fade())
   .component();
 ```
+
+### Renderer Performance Thresholds
+
+`nativeText()` is the default renderer for high-value UI text: titles, labels, onboarding copy, product copy, and short strings where token motion is easy to see. It is not designed to make long paragraphs or hundreds of grapheme tokens free.
+
+The example app has a `Playback -> Renderer Performance` probe for checking the practical boundary. It includes word, grapheme, shared-row, replay, and progress cases. Use it with a real FPS source such as React Native Perf Monitor, Flashlight, Xcode Instruments, or Android Studio profiler.
+
+Use these terms when recording results:
+
+- `measured`: the same case family has iOS and Android evidence.
+- `provisional`: only one platform, simulator-only, emulator-only, or dev-mode-only evidence exists.
+- `unknown`: the case family was not measured.
+
+The decision rule is intentionally conservative. If normal title, label, and product-copy workloads are smooth, keep `nativeText()` as the default renderer and document any grapheme-heavy boundary as guidance. If normal workloads jank, open a renderer optimization plan before adding more effects. If only stress grapheme cases fail, document the stress boundary instead of treating that as proof that the default renderer is wrong.
 
 ## Playback Lifecycle
 
@@ -350,7 +371,7 @@ One controls object may be passed to multiple text motion components. Commands b
 
 Text Motion intentionally does not provide a context/provider playback API or a public component ref API. Pass controls explicitly with `controls={controls}` so the connection is visible in JSX.
 
-Performance note: controls are designed for short UI text. For a title, label, or short product sentence, playback work should stay small and predictable. For long paragraphs, dense lists, or grapheme-split text with many characters, check the example stress case and measure on your target device before using it in production.
+Performance note: controls are designed for short UI text. For a title, label, or short product sentence, playback work should stay small and predictable. For long paragraphs, dense lists, or grapheme-split text with many characters, check the `Renderer Performance` probe and measure on your target device before using it in production.
 
 The renderer internals may change as larger workloads become important, so treat the example stress case as a profiling aid rather than a public promise about how controls are implemented.
 

@@ -314,6 +314,32 @@ describe('nativeText', () => {
     expect(getHiddenTokenText('word-0')).toHaveProp('maxFontSizeMultiplier', 1.4);
   });
 
+  it('keeps animated token testIDs on containers and text props on inner Text', async () => {
+    const Label = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(fade())
+      .component();
+
+    await render(
+      <Label allowFontScaling={false} maxFontSizeMultiplier={1.4}>
+        Hello motion
+      </Label>,
+    );
+
+    const tokenContainer = getHiddenToken('word-0');
+    const tokenText = getHiddenTokenText('word-0');
+
+    expect(tokenContainer).toHaveProp('accessibilityElementsHidden', true);
+    expect(tokenContainer).toHaveProp('accessible', false);
+    expect(tokenContainer).toHaveProp('importantForAccessibility', 'no-hide-descendants');
+    expect(tokenContainer).not.toHaveProp('allowFontScaling');
+    expect(tokenContainer).not.toHaveProp('maxFontSizeMultiplier');
+    expect(tokenText).toHaveTextContent('Hello');
+    expect(tokenText).toHaveProp('allowFontScaling', false);
+    expect(tokenText).toHaveProp('maxFontSizeMultiplier', 1.4);
+  });
+
   it('animates token styles through Reanimated test utilities', async () => {
     const HeroReveal = defineTextMotion()
       .split(words())
