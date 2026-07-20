@@ -1,11 +1,17 @@
+import type { TextMotionSplitRenderableRecipeBuilder } from '../recipe/recipe';
+
 import { fade, pulse, rise, scale } from '../effects';
 import { defineTextMotion } from '../recipe';
 import { nativeText } from '../renderers';
 import { words } from '../split';
 import { stagger, wave } from '../timeline';
 
+type NativeTextPresetBuilder = TextMotionSplitRenderableRecipeBuilder<
+  'native-text' | 'style-transform'
+>;
+
 /** Editorial title reveal with centered stagger, rise, fade, and subtle scale. */
-export function editorialRise() {
+export function editorialRise(): NativeTextPresetBuilder {
   return defineTextMotion()
     .split(words())
     .layout(nativeText())
@@ -18,7 +24,7 @@ export function editorialRise() {
 }
 
 /** Soft wave reveal for friendly product copy. */
-export function softWave() {
+export function softWave(): NativeTextPresetBuilder {
   return defineTextMotion()
     .split(words())
     .layout(nativeText())
@@ -27,7 +33,7 @@ export function softWave() {
 }
 
 /** Gentle emphasis preset for small labels and inline highlight copy. */
-export function gentleEmphasis() {
+export function gentleEmphasis(): NativeTextPresetBuilder {
   return defineTextMotion()
     .split(words())
     .layout(nativeText())

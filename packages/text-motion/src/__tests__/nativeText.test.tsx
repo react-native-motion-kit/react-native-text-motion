@@ -8,6 +8,8 @@ import {
   parentLabelPolicy,
   pulse,
   rise,
+  scale,
+  slide,
   stagger,
   words,
 } from '@react-native-motion-kit/text-motion';
@@ -149,8 +151,11 @@ describe('nativeText', () => {
     jest.useRealTimers();
   });
 
-  it('declares native-text capability', () => {
-    expect(readTextMotionRendererDescriptor(nativeText()).capabilities).toEqual(['native-text']);
+  it('declares source-token native text and style-transform support', () => {
+    expect(readTextMotionRendererDescriptor(nativeText())).toMatchObject({
+      capabilities: ['native-text', 'style-transform'],
+      motionUnit: 'source-token',
+    });
   });
 
   it('keeps descriptor fields off the public renderer runtime object', () => {
@@ -380,6 +385,38 @@ describe('nativeText', () => {
     expect(lastWord).toHaveAnimatedStyle({
       opacity: 1,
       transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+    });
+  });
+
+  it('composes built-in transform effects without changing the nativeText render tree', async () => {
+    const Reveal = defineTextMotion()
+      .split(words())
+      .layout(nativeText({ testIDPrefix: 'word' }))
+      .effect(
+        fade({ from: 0.25 })
+          .and(slide({ x: 6, y: 8 }))
+          .and(scale({ from: 0.5, to: 1.1 })),
+      )
+      .motion({ kind: 'timing', options: { duration: 400 } })
+      .component();
+
+    await render(<Reveal>Hello</Reveal>);
+
+    const tokenContainer = getHiddenToken('word-0');
+    const tokenText = getHiddenTokenText('word-0');
+
+    expect(tokenText).toHaveTextContent('Hello');
+    expect(tokenContainer).not.toHaveProp('allowFontScaling');
+    expect(tokenContainer).toHaveAnimatedStyle({
+      opacity: 0.25,
+      transform: [{ translateX: 6 }, { translateY: 8 }, { scale: 0.5 }],
+    });
+
+    jest.advanceTimersByTime(400);
+
+    expect(tokenContainer).toHaveAnimatedStyle({
+      opacity: 1,
+      transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1.1 }],
     });
   });
 

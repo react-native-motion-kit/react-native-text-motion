@@ -137,19 +137,41 @@ export function Headline() {
 
 When `progress` is provided, `.motion()` does not run internal autoplay. Choose the playback feel where you update the shared value instead, for example `progress.value = withTiming(1, { duration: 720 })` or `progress.value = withSpring(1)`. `controls` and `progress` cannot be used together.
 
+Line reveal is for motion based on the lines React Native actually rendered after width, font, font scale, alignment, and language shaping are applied. Use `overlayText()` with `lineReveal()` and do not add `.split(...)`:
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const HeroLines = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+```
+
+Use this for responsive hero titles, section headings, and concise product copy where the visual line breaks matter. `nativeText()` animates source word or grapheme tokens. `overlayText()` animates actual rendered lines. `lines()` is still only an explicit `\n` splitter; it does not discover automatic wrapping. TypeScript and runtime capability checks reject `.split(...)` with `overlayText()`.
+
+`overlayText()` also accepts the built-in style-transform effects (`fade`, `rise`, `slide`, `shake`, `scale`, and `pulse`) because they operate on the rendered line frame. `lineReveal()` is split internally: its opacity is applied to the line frame, while its vertical reveal offset moves only the paragraph copy inside the line mask. This lets combinations such as `lineReveal().and(scale())` and `pulse()` grow from the measured line center without being clipped by the renderer's own line mask.
+
 ## Stable MVP Scope
 
 - recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
 - splitters: `graphemes`, `words`, `custom`, experimental newline-only `lines`
-- renderer: `nativeText`
+- renderers: `nativeText`, `overlayText`
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
-- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`
+- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
 - explicit playback `controls` for event-driven play/replay/reset/stop
 - controlled progress via external Reanimated shared values
 - accessibility default: parent label plus hidden decorative token nodes
 
-`nativeText()` is a transform-first token renderer for titles, labels, onboarding copy, and short product copy. Animated tokens use an animated `View` container with an inner `Text` so transforms behave consistently across React Native platforms. Static tokens still render as plain `Text`. This makes `nativeText()` useful for split text motion, but it is not a full React Native `Text` drop-in. Layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
+`nativeText()` is a transform-first token renderer for titles, labels, onboarding copy, and short product copy. Animated tokens use an animated `View` container with an inner `Text` so transforms behave consistently across React Native platforms. Static tokens still render as plain `Text`. This makes `nativeText()` useful for source word or grapheme motion, but it is not a full React Native `Text` drop-in. Layout props such as `numberOfLines`, `ellipsizeMode`, and `onTextLayout` are intentionally outside the stable MVP contract.
 
 When you pass `nativeText({ testIDPrefix })`, generated token `testID` values identify the animated token container. Text rendering props such as `allowFontScaling` and `maxFontSizeMultiplier` are forwarded to the inner `Text`. Treat this as testing and compatibility guidance, not as a styling extension API. Very long grapheme-by-grapheme animations create many native views and should be treated as stress cases until a dedicated performance checkpoint says otherwise.
 
@@ -157,17 +179,26 @@ The example app includes `Playback -> Renderer Performance` for this checkpoint.
 
 Manual hard line breaks are supported: text such as `"First line\nSecond line"` keeps
 the newline as a visual break in `nativeText()`, and the newline does not consume a
-motion index. Automatic RN-rendered line-to-token mapping is still deferred.
+motion index. Use `overlayText()` when the motion unit should be the actual
+rendered line after React Native wraps the paragraph.
 
-By default, playback is lifecycle-driven: animated tokens autoplay on mount, ordinary parent rerenders with the same text/recipe preserve in-flight progress, and text/effect/timeline/motion changes replay the affected token animation. Text changes are enter-only in the MVP: old text is not kept for exit animation, crossfade, or token diffing. Components also accept `controls` for event-driven playback and `progress`, a Reanimated `SharedValue<number>` from `0` to `1`, for raw externally controlled progress. `controls` uses the component recipe `.motion()` against the current text; `progress` is app-owned and makes changed text follow the current shared value instead of starting autoplay.
+`overlayText()` preserves blank or whitespace-only rendered lines visually, but those lines do not consume a motion index. It uses one full paragraph copy per moving rendered line, so work scales with visible rendered lines rather than source words or graphemes. This is intended for titles, headings, and product copy. Do not treat performance as measured until the same case family has iOS and Android evidence.
 
-Skia, stable line reveal, rich text, and RN-rendered line-to-token mapping are deferred. Context/provider playback wiring and public playback refs are intentionally not part of the design; pass `controls` explicitly where a component should respond to playback commands.
+By default, playback is lifecycle-driven: animated tokens or lines autoplay on mount, ordinary parent rerenders with the same text/recipe preserve in-flight progress, and text/effect/timeline/motion changes replay the affected animation. Text changes are enter-only in the MVP: old text is not kept for exit animation, crossfade, or token diffing. Components also accept `controls` for event-driven playback and `progress`, a Reanimated `SharedValue<number>` from `0` to `1`, for raw externally controlled progress. `controls` uses the component recipe `.motion()` against the current text; `progress` is app-owned and makes changed text follow the current shared value instead of starting autoplay.
+
+For `overlayText()`, identical line measurement does not replay. Geometry-only relayout preserves the current run. If line topology changes, component-owned playback restarts once for the new rendered lines. With external `progress`, the app-owned shared value is preserved and applied to the new geometry. Reduced motion renders the final readable source text without measurement or playback overlays. Malformed or unsupported native geometry also falls back to readable final source text.
+
+Before the first valid line measurement, the source paragraph remains the layout owner. If an effect starts at `scale: 1`, the pending source keeps the same combined initial opacity and transform as other renderers. If the initial scale is not exactly `1`, the pending source is visually hidden until valid line geometry is available so the first visible scaled frame uses the measured line center instead of the paragraph center.
+
+This fixes renderer self-clipping for line-level scale and pulse effects. It does not reserve extra layout space for large transforms and it cannot bypass clipping from an ancestor with `overflow: hidden`; those remain normal React Native transform constraints.
+
+Skia, rich text, and RN-rendered line-to-token mapping are deferred. Context/provider playback wiring and public playback refs are intentionally not part of the design; pass `controls` explicitly where a component should respond to playback commands.
 
 ## Scope & Roadmap
 
 `text-motion` stays focused on split text motion: tokenization, layout-aware timing, effects, renderers, split-token playback, accessibility, and presets for titles, labels, onboarding copy, and product copy.
 
-Features that depend on text tokens or text layout can be considered here, including typewriter, scramble, wipe, text-change transitions, and renderer-specific effects behind explicit capability boundaries. Precise line-aware reveal remains deferred until RN layout measurement and token-to-line mapping policies are reliable enough to document.
+Features that depend on text tokens or text layout can be considered here, including typewriter, scramble, wipe, text-change transitions, future rendered-line extensions such as masks or word-in-line effects, and renderer-specific effects behind explicit capability boundaries.
 
 Features that solve a different problem are likely better served by separate package candidates. Number count-up, odometer, currency, percentage, timer, and delta animations are value-formatting problems rather than split-text layout problems. A separate value-motion package could share Motion Kit conventions without expanding the `text-motion` API surface.
 
@@ -215,18 +246,19 @@ Use this package today when you need:
 - accessible split text that screen readers read as one phrase
 - event-driven playback controls for replay/reset/stop without remounting
 - externally controlled raw progress for scroll, gesture, or synchronized text motion
+- rendered-line reveal for responsive hero titles, headings, and concise product copy
 - a lightweight core package without Skia as a required dependency
 
 Wait for a later version if you need:
 
 - playback APIs such as `pause`, `seek`, or `reverse`
 - first-class scroll, gesture, or in-view drivers
-- precise line reveal, masked reveal, or token-to-line mapping
+- per-token line mapping or mixed word-in-line animation
 - Skia effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text with links, selectable text, or full native `Text` layout parity
 - heavy use across long paragraphs, virtualized lists, or dense UI without your own performance validation
 
-Next focus: proving controls in real app flows, then deciding whether state-transition props, `pause`/`seek`/`reverse`, in-view helpers, scroll/gesture drivers, line-aware effects, or optional Skia renderers deserve first-class APIs.
+Next focus: verifying line renderer performance and platform behavior, then deciding whether state-transition props, `pause`/`seek`/`reverse`, in-view helpers, scroll/gesture drivers, word-in-line effects, or optional Skia renderers deserve first-class APIs.
 
 ## License
 

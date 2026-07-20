@@ -6,11 +6,15 @@ import type {
   TextMotionEffect,
   TextMotionMotionConfig,
   TextMotionRecipeConfig,
-  TextMotionCompatibleEffect,
   TextMotionRenderer,
   TextMotionRendererCapability,
   TextMotionSplitter,
 } from '../types';
+import type {
+  TextMotionCompatibleEffect,
+  TextMotionRenderedLineRenderer,
+  TextMotionSourceTokenRenderer,
+} from '../types/renderer';
 
 import { createTextMotionComponent } from './component';
 
@@ -26,18 +30,22 @@ type RecipeDraft<RendererCapabilities extends TextMotionRendererCapability> = {
 type RequiredCapabilitiesOfEffect<Effect extends TextMotionAnyEffect> =
   Effect extends TextMotionEffect<infer RequiredCapabilities> ? RequiredCapabilities : never;
 
+type CapabilitiesOfRenderer<Renderer> =
+  Renderer extends TextMotionRenderer<infer Capabilities, unknown> ? Capabilities : never;
+
+type AnyTextMotionSourceTokenRenderer = TextMotionSourceTokenRenderer<
+  TextMotionRendererCapability,
+  unknown
+>;
+type AnyTextMotionRenderedLineRenderer = TextMotionRenderedLineRenderer<
+  TextMotionRendererCapability,
+  unknown
+>;
+
 type TextMotionRecipeBuilderMethods<
   RendererCapabilities extends TextMotionRendererCapability,
   CurrentBuilder,
 > = {
-  /** Choose how the input string is split into tokens. */
-  split(splitter: TextMotionSplitter): CurrentBuilder;
-
-  /** Choose the renderer responsible for measuring and drawing tokens. */
-  layout<NextCapabilities extends TextMotionRendererCapability>(
-    renderer: TextMotionRenderer<NextCapabilities>,
-  ): TextMotionRenderableRecipeBuilder<NextCapabilities>;
-
   /** Choose the timing strategy for token delays. */
   timeline(timeline: TextMotionAnyTimeline): CurrentBuilder;
 
@@ -66,7 +74,36 @@ export interface TextMotionRecipeBuilder<
 > extends TextMotionRecipeBuilderMethods<
   RendererCapabilities,
   TextMotionRecipeBuilder<RendererCapabilities>
-> {}
+> {
+  /** Choose how the input string is split into tokens. */
+  split(splitter: TextMotionSplitter): TextMotionSplitRecipeBuilder<RendererCapabilities>;
+
+  /** Choose the renderer responsible for measuring and drawing split input. */
+  layout<Renderer extends AnyTextMotionSourceTokenRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderableRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
+  /** Choose the renderer responsible for its own layout unit. */
+  layout<Renderer extends AnyTextMotionRenderedLineRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderedLineRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+}
+
+/** Builder state after a splitter has been selected before renderer layout. */
+interface TextMotionSplitRecipeBuilder<
+  RendererCapabilities extends TextMotionRendererCapability = never,
+> extends TextMotionRecipeBuilderMethods<
+  RendererCapabilities,
+  TextMotionSplitRecipeBuilder<RendererCapabilities>
+> {
+  /** Choose how the input string is split into tokens. */
+  split(splitter: TextMotionSplitter): TextMotionSplitRecipeBuilder<RendererCapabilities>;
+
+  /** Choose the renderer responsible for measuring and drawing split input. */
+  layout<Renderer extends AnyTextMotionSourceTokenRenderer>(
+    renderer: Renderer,
+  ): TextMotionSplitRenderableRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+}
 
 /** Builder state after a renderer has been selected. */
 export interface TextMotionRenderableRecipeBuilder<
@@ -75,6 +112,59 @@ export interface TextMotionRenderableRecipeBuilder<
   RendererCapabilities,
   TextMotionRenderableRecipeBuilder<RendererCapabilities>
 > {
+  /** Choose how the input string is split into tokens. */
+  split(splitter: TextMotionSplitter): TextMotionSplitRenderableRecipeBuilder<RendererCapabilities>;
+
+  /** Choose the renderer responsible for measuring and drawing split input. */
+  layout<Renderer extends AnyTextMotionSourceTokenRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderableRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
+  /** Choose the renderer responsible for its own layout unit. */
+  layout<Renderer extends AnyTextMotionRenderedLineRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderedLineRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
+  /** Create a React component from the current recipe. */
+  component(): TextMotionComponent;
+}
+
+/** Builder state after a splittable renderer and splitter have been selected. */
+export interface TextMotionSplitRenderableRecipeBuilder<
+  RendererCapabilities extends TextMotionRendererCapability,
+> extends TextMotionRecipeBuilderMethods<
+  RendererCapabilities,
+  TextMotionSplitRenderableRecipeBuilder<RendererCapabilities>
+> {
+  /** Choose how the input string is split into tokens. */
+  split(splitter: TextMotionSplitter): TextMotionSplitRenderableRecipeBuilder<RendererCapabilities>;
+
+  /** Choose the renderer responsible for measuring and drawing split input. */
+  layout<Renderer extends AnyTextMotionSourceTokenRenderer>(
+    renderer: Renderer,
+  ): TextMotionSplitRenderableRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
+  /** Create a React component from the current recipe. */
+  component(): TextMotionComponent;
+}
+
+/** Builder state after a rendered-line renderer has been selected. */
+interface TextMotionRenderedLineRecipeBuilder<
+  RendererCapabilities extends TextMotionRendererCapability,
+> extends TextMotionRecipeBuilderMethods<
+  RendererCapabilities,
+  TextMotionRenderedLineRecipeBuilder<RendererCapabilities>
+> {
+  /** Choose the renderer responsible for measuring and drawing split input. */
+  layout<Renderer extends AnyTextMotionSourceTokenRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderableRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
+  /** Choose the renderer responsible for its own layout unit. */
+  layout<Renderer extends AnyTextMotionRenderedLineRenderer>(
+    renderer: Renderer,
+  ): TextMotionRenderedLineRecipeBuilder<CapabilitiesOfRenderer<Renderer>>;
+
   /** Create a React component from the current recipe. */
   component(): TextMotionComponent;
 }
@@ -178,11 +268,9 @@ function cloneDraft<RendererCapabilities extends TextMotionRendererCapability>(
   };
 }
 
-class TextMotionRecipeBuilderImpl<RendererCapabilities extends TextMotionRendererCapability = never>
-  implements
-    TextMotionRecipeBuilder<RendererCapabilities>,
-    TextMotionRenderableRecipeBuilder<RendererCapabilities>
-{
+class TextMotionRecipeBuilderImpl<
+  RendererCapabilities extends TextMotionRendererCapability = never,
+> {
   private readonly draft: RecipeDraft<RendererCapabilities>;
 
   constructor(draft: Partial<RecipeDraft<RendererCapabilities>> = {}) {
@@ -206,7 +294,7 @@ class TextMotionRecipeBuilderImpl<RendererCapabilities extends TextMotionRendere
 
   /** Choose the renderer responsible for measuring and drawing tokens. */
   layout<NextCapabilities extends TextMotionRendererCapability>(
-    renderer: TextMotionRenderer<NextCapabilities>,
+    renderer: TextMotionRenderer<NextCapabilities, unknown>,
   ): TextMotionRecipeBuilderImpl<NextCapabilities> {
     return new TextMotionRecipeBuilderImpl<NextCapabilities>({
       ...cloneDraft(this.draft),
@@ -267,5 +355,5 @@ class TextMotionRecipeBuilderImpl<RendererCapabilities extends TextMotionRendere
 
 /** @internal */
 export function createTextMotionRecipeBuilder(): TextMotionRecipeBuilder {
-  return new TextMotionRecipeBuilderImpl();
+  return new TextMotionRecipeBuilderImpl() as TextMotionRecipeBuilder;
 }

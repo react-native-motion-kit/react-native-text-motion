@@ -20,6 +20,8 @@ split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> compo
 
 빠르게 쓰고 싶으면 preset을 사용하면 되고, tokenization, timing, effect, accessibility, renderer 선택을 직접 잡고 싶으면 recipe를 조합하면 됩니다.
 
+TypeScript에서는 `.layout(...)`으로 renderer를 선택한 뒤에만 `.component()`를 사용할 수 있습니다. 완성 전 recipe를 확인하거나 전달해야 할 때는 layout 전에도 `.recipe()`를 사용할 수 있습니다.
+
 Preset을 사용한 빠른 예시:
 
 ```tsx
@@ -135,19 +137,41 @@ export function Headline() {
 
 `progress`가 제공되면 `.motion()`은 내부 autoplay를 실행하지 않습니다. 대신 shared value를 업데이트하는 곳에서 playback 느낌을 정하면 됩니다. 예를 들어 `progress.value = withTiming(1, { duration: 720 })` 또는 `progress.value = withSpring(1)`처럼 직접 움직입니다. `controls`와 `progress`는 함께 사용할 수 없습니다.
 
+Line reveal은 React Native가 width, font, font scale, alignment, language shaping을 적용한 뒤 실제로 렌더링한 줄을 기준으로 움직입니다. `overlayText()`와 `lineReveal()`을 함께 쓰고 `.split(...)`은 추가하지 않습니다.
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const HeroLines = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+```
+
+Responsive hero title, section heading, 짧은 product copy처럼 실제 시각적 줄바꿈이 중요한 곳에 사용하세요. `nativeText()`는 원문 word/grapheme token을 움직이고, `overlayText()`는 실제 rendered line을 움직입니다. `lines()`는 여전히 명시적인 `\n`만 나누는 splitter이며 자동 줄바꿈을 찾지 않습니다. TypeScript와 runtime capability check는 `overlayText()`와 `.split(...)` 조합을 거부합니다.
+
+`overlayText()`는 rendered line frame에 적용되는 built-in style-transform effect(`fade`, `rise`, `slide`, `shake`, `scale`, `pulse`)도 받습니다. 내부적으로 `lineReveal()`은 opacity를 line frame에 적용하고, vertical reveal offset만 line mask 안의 paragraph copy에 적용합니다. 그래서 `lineReveal().and(scale())` 또는 `pulse()` 조합은 measured line center를 기준으로 커지며 renderer 자신의 line mask에 잘리지 않습니다.
+
 ## Stable MVP Scope
 
 - recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
 - splitters: `graphemes`, `words`, `custom`, experimental newline-only `lines`
-- renderer: `nativeText`
+- renderers: `nativeText`, `overlayText`
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
-- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`
+- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
 - event-driven play/replay/reset/stop을 위한 명시적인 playback `controls`
 - external Reanimated shared value 기반 controlled progress
 - accessibility default: parent label plus hidden decorative token nodes
 
-`nativeText()`는 title, label, onboarding copy, 짧은 product copy를 위한 transform-first token renderer입니다. Animated token은 React Native 플랫폼에서 transform이 안정적으로 보이도록 animated `View` container와 내부 `Text`로 렌더링됩니다. Static token은 그대로 plain `Text`로 렌더링됩니다. 그래서 `nativeText()`는 split text motion에는 적합하지만 React Native `Text`의 완전한 drop-in 대체품은 아닙니다. `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
+`nativeText()`는 title, label, onboarding copy, 짧은 product copy를 위한 transform-first token renderer입니다. Animated token은 React Native 플랫폼에서 transform이 안정적으로 보이도록 animated `View` container와 내부 `Text`로 렌더링됩니다. Static token은 그대로 plain `Text`로 렌더링됩니다. 그래서 `nativeText()`는 원문 word/grapheme motion에는 적합하지만 React Native `Text`의 완전한 drop-in 대체품은 아닙니다. `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
 
 `nativeText({ testIDPrefix })`를 사용하면 generated token `testID`는 animated token container를 가리킵니다. `allowFontScaling`, `maxFontSizeMultiplier`처럼 text rendering에 영향을 주는 prop은 내부 `Text`로 전달됩니다. 이 내용은 테스트와 compatibility를 위한 안내이지, token을 직접 스타일링하기 위한 확장 API가 아닙니다. 매우 긴 문장을 grapheme 단위로 애니메이션하면 native view가 많이 생기므로, 별도 performance checkpoint 전까지는 stress case로 봐야 합니다.
 
@@ -156,17 +180,25 @@ Example app에는 이 checkpoint를 위한 `Playback -> Renderer Performance` �
 직접 입력한 hard line break는 지원합니다. 예를 들어
 `"First line\nSecond line"`은 `nativeText()`에서 줄바꿈이 보존되어 렌더링되고,
 newline 자체는 motion index를 소비하지 않습니다. RN이 화면 너비 때문에 자동
-줄바꿈한 실제 줄을 token에 매핑하는 기능은 아직 deferred입니다.
+줄바꿈한 실제 줄 자체를 motion unit으로 써야 한다면 `overlayText()`를 사용하세요.
 
-기본 playback은 lifecycle 기반입니다. mount되면 animated token이 자동 실행되고, 같은 text/recipe로 parent rerender가 일어나면 진행 중인 progress를 유지하며, text/effect/timeline/motion이 바뀌면 affected token animation을 다시 실행합니다. MVP에서 text change는 enter-only입니다. 이전 text를 남겨 exit animation, crossfade, token diff를 만들지는 않습니다. Component는 event-driven playback을 위한 `controls`와, raw external control을 위한 `progress`도 받습니다. `controls`는 현재 text에 대해 component recipe의 `.motion()`을 사용하고, `progress`는 앱이 소유하는 Reanimated `SharedValue<number>`가 변경된 text도 현재 shared value에 맞춰 제어합니다.
+`overlayText()`는 blank 또는 whitespace-only rendered line을 시각적으로 보존하지만, 그 줄은 motion index를 소비하지 않습니다. 움직이는 rendered line마다 full paragraph copy 하나를 사용하므로 비용은 원문 word/grapheme 수가 아니라 visible rendered line 수에 비례합니다. Title, heading, product copy에 맞춘 기능입니다. 같은 case family에서 iOS와 Android evidence가 모두 있기 전에는 measured performance라고 말하지 않습니다.
 
-Skia, stable line reveal, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다. Context/provider playback wiring과 public playback ref는 의도적으로 이 디자인에 포함하지 않습니다. Playback command에 반응해야 하는 component에는 `controls`를 명시적으로 전달하세요.
+기본 playback은 lifecycle 기반입니다. mount되면 animated token 또는 line이 자동 실행되고, 같은 text/recipe로 parent rerender가 일어나면 진행 중인 progress를 유지하며, text/effect/timeline/motion이 바뀌면 affected animation을 다시 실행합니다. MVP에서 text change는 enter-only입니다. 이전 text를 남겨 exit animation, crossfade, token diff를 만들지는 않습니다. Component는 event-driven playback을 위한 `controls`와, raw external control을 위한 `progress`도 받습니다. `controls`는 현재 text에 대해 component recipe의 `.motion()`을 사용하고, `progress`는 앱이 소유하는 Reanimated `SharedValue<number>`가 변경된 text도 현재 shared value에 맞춰 제어합니다.
+
+`overlayText()`에서 동일한 line measurement는 replay를 만들지 않습니다. Geometry만 바뀐 relayout은 현재 run을 보존합니다. Line topology가 바뀌면 component-owned playback은 새 rendered line sequence로 한 번 다시 시작합니다. External `progress`를 넘긴 경우 앱이 소유한 shared value가 유지되고 새 geometry에 그대로 적용됩니다. Reduced motion에서는 measurement/playback overlay 없이 최종 readable source text를 즉시 렌더링합니다. Malformed 또는 unsupported native geometry도 readable final source text로 fallback합니다.
+
+첫 valid line measurement가 오기 전에는 source paragraph가 layout 소유자입니다. Effect의 initial scale이 정확히 `1`이면 pending source는 다른 renderer와 같은 combined initial opacity/transform을 유지합니다. Initial scale이 정확히 `1`이 아니면 valid line geometry가 준비될 때까지 pending source를 시각적으로 숨깁니다. 이렇게 해야 처음 보이는 scaled frame이 paragraph center가 아니라 measured line center를 사용합니다.
+
+이 동작은 line 단위 scale/pulse가 renderer 자신의 mask에 잘리는 문제를 해결합니다. 큰 transform을 위해 layout 공간을 추가로 예약하지는 않으며, ancestor의 `overflow: hidden` clipping도 우회하지 않습니다. 둘 다 React Native transform의 정상적인 제약입니다.
+
+Skia, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다. Context/provider playback wiring과 public playback ref는 의도적으로 이 디자인에 포함하지 않습니다. Playback command에 반응해야 하는 component에는 `controls`를 명시적으로 전달하세요.
 
 ## Scope & Roadmap
 
 `text-motion`은 split text motion에 집중합니다. 즉 tokenization, layout-aware timing, effect, renderer, split token playback, accessibility, 그리고 title, label, onboarding copy, product copy를 위한 preset이 핵심입니다.
 
-Text token 또는 text layout에 의존하는 기능은 이 패키지에서 고려할 수 있습니다. 예를 들면 typewriter, scramble, wipe, text-change transition, 그리고 명시적인 capability boundary 뒤에 있는 renderer-specific effect가 있습니다. 정확한 line-aware reveal은 실제 RN layout 측정과 token-to-line mapping 정책이 필요하므로 deferred로 둡니다.
+Text token 또는 text layout에 의존하는 기능은 이 패키지에서 고려할 수 있습니다. 예를 들면 typewriter, scramble, wipe, text-change transition, mask나 word-in-line effect 같은 향후 rendered-line extension, 그리고 명시적인 capability boundary 뒤에 있는 renderer-specific effect가 있습니다.
 
 다른 문제를 푸는 기능은 별도 package가 더 적합할 가능성이 큽니다. Number count-up, odometer, currency, percentage, timer, delta animation은 split-text layout 문제가 아니라 value formatting 문제입니다. 나중에 별도의 value-motion 계열 package가 Motion Kit convention을 공유할 수 있지만, 그 때문에 `text-motion` API surface를 넓히지는 않습니다.
 
@@ -214,18 +246,19 @@ corepack pnpm run example:build
 - screen reader가 split token을 하나씩 읽지 않고 문장을 한 번만 읽어야 할 때
 - button, screen focus, onboarding step에서 remount 없이 replay/reset/stop을 실행하고 싶을 때
 - scroll, gesture, 또는 여러 UI 요소가 공유하는 Reanimated value로 text motion progress를 직접 제어하고 싶을 때
+- responsive hero title, heading, 짧은 product copy를 실제 rendered line 기준으로 reveal하고 싶을 때
 - Skia를 필수 dependency로 넣지 않는 가벼운 core package가 필요할 때
 
 다음이 필요하다면 이후 버전을 기다리는 편이 좋습니다.
 
 - `pause`, `seek`, `reverse` 같은 추가 playback API
 - first-class scroll, gesture, in-view driver
-- 정확한 line reveal, masked reveal, token-to-line mapping
+- token별 line mapping 또는 word-in-line animation
 - blur, glow, shader, mask, glyph distortion 같은 Skia effect
 - link, selectable text, rich nested text, 완전한 native `Text` layout parity
 - 긴 문장, virtualized list, dense UI에서 자체 성능 검증 없이 많이 쓰는 경우
 
-다음 초점은 실제 앱에서 controls API를 검증한 뒤, state-transition prop, `pause`/`seek`/`reverse`, screen focus helper, in-view helper, scroll/gesture driver를 first-class API로 올릴 가치가 있는지 판단하는 것입니다. Line-aware effect와 optional Skia renderer는 native renderer, layout 동작, 성능 기준이 더 검증된 뒤 다룹니다.
+다음 초점은 line renderer performance와 platform behavior를 검증한 뒤, state-transition prop, `pause`/`seek`/`reverse`, screen focus helper, in-view helper, scroll/gesture driver, word-in-line effect, optional Skia renderer를 first-class API로 올릴 가치가 있는지 판단하는 것입니다.
 
 ## License
 
