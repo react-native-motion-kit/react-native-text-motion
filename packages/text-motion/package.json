@@ -57,7 +57,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "bob build",
+    "build": "bob build && node scripts/check-declarations.mjs",
     "clean": "del-cli lib",
     "prepare": "pnpm run build",
     "test": "jest",

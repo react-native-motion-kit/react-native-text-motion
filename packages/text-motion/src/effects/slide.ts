@@ -11,8 +11,12 @@ export type SlideOptions = {
 
 /** Move each token from an x/y offset into place. */
 export function slide(options: SlideOptions = {}) {
-  return createTextMotionEffect('slide', {
-    x: validateFiniteEffectNumber(options.x ?? 0, 'slide x'),
-    y: validateFiniteEffectNumber(options.y ?? 12, 'slide y'),
-  });
+  return createTextMotionEffect(
+    'slide',
+    {
+      x: validateFiniteEffectNumber(options.x ?? 0, 'slide x'),
+      y: validateFiniteEffectNumber(options.y ?? 12, 'slide y'),
+    },
+    ['style-transform'],
+  );
 }
