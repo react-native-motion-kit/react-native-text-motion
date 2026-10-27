@@ -1,5 +1,13 @@
 import * as textMotion from '@react-native-motion-kit/text-motion';
-import { fade, pulse, rise, scale, shake, slide } from '@react-native-motion-kit/text-motion';
+import {
+  fade,
+  lineReveal,
+  pulse,
+  rise,
+  scale,
+  shake,
+  slide,
+} from '@react-native-motion-kit/text-motion';
 
 import { readTextMotionEffectDescriptor } from '../recipe/descriptors';
 
@@ -32,6 +40,10 @@ describe('effects', () => {
       createEffect: () => shake({ x: Number.POSITIVE_INFINITY }),
       message: 'shake x must be a finite number',
     },
+    {
+      createEffect: () => lineReveal({ y: Number.NaN }),
+      message: 'lineReveal y must be a finite number',
+    },
   ];
 
   it('uses native-text capability for stable effects', () => {
@@ -42,17 +54,19 @@ describe('effects', () => {
       scale({ from: 0.9 }),
       pulse({ scale: 1.02 }),
       shake({ x: 3 }),
+      lineReveal({ fromOpacity: 0.2, y: 10 }),
     ];
 
     expect(
       effects.map((effect) => readTextMotionEffectDescriptor(effect).requiredCapabilities),
     ).toEqual([
-      ['native-text'],
-      ['native-text'],
-      ['native-text'],
-      ['native-text'],
-      ['native-text'],
-      ['native-text'],
+      ['style-transform'],
+      ['style-transform'],
+      ['style-transform'],
+      ['style-transform'],
+      ['style-transform'],
+      ['style-transform'],
+      ['line-mask', 'style-transform'],
     ]);
   });
 
@@ -73,7 +87,7 @@ describe('effects', () => {
   });
 
   it('does not expose deferred stable APIs', () => {
-    expect('lineReveal' in textMotion).toBe(false);
+    expect('lineReveal' in textMotion).toBe(true);
     expect('typewriter' in textMotion).toBe(false);
     expect('scramble' in textMotion).toBe(false);
     expect('wipe' in textMotion).toBe(false);

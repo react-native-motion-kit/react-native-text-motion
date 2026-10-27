@@ -2,22 +2,21 @@ import { useLayoutEffect, useRef } from 'react';
 import { cancelAnimation, type SharedValue } from 'react-native-reanimated';
 
 import type { TextMotionControls } from '../controls';
-import type { NativeTextTokenMotion } from './nativeTextPlayback';
 
 import {
   readTextMotionControlsDescriptor,
   type TextMotionControlCommand,
   type TextMotionControlCommandKind,
 } from '../controls/descriptors';
-import { clampNativeTextProgress } from './nativeTextProgress';
+import { clampTextMotionProgress, type TextMotionItemMotion } from './rendererMotion';
 
-type NativeTextProgressAnimationFactory = (tokenMotion: NativeTextTokenMotion) => number;
+type NativeTextProgressAnimationFactory = (tokenMotion: TextMotionItemMotion) => number;
 
 type NativeTextOwnedPlaybackCommandOptions = {
   createProgressAnimation: NativeTextProgressAnimationFactory;
   progress: SharedValue<number>;
   renderFinalState: boolean;
-  tokenMotion: NativeTextTokenMotion;
+  tokenMotion: TextMotionItemMotion;
 };
 
 type NativeTextPlaybackCommandHandler = (options: NativeTextOwnedPlaybackCommandOptions) => void;
@@ -68,7 +67,7 @@ function playOwnedProgress({
     return;
   }
 
-  const currentProgress = clampNativeTextProgress(progress.value);
+  const currentProgress = clampTextMotionProgress(progress.value);
   const delayMs = currentProgress <= 0 ? tokenMotion.delayMs : 0;
 
   progress.value = createProgressAnimation({

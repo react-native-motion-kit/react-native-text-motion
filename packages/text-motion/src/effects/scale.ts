@@ -11,8 +11,12 @@ export type ScaleOptions = {
 
 /** Scale each token between two scale values. */
 export function scale(options: ScaleOptions = {}) {
-  return createTextMotionEffect('scale', {
-    from: validateFiniteEffectNumber(options.from ?? 0.96, 'scale from'),
-    to: validateFiniteEffectNumber(options.to ?? 1, 'scale to'),
-  });
+  return createTextMotionEffect(
+    'scale',
+    {
+      from: validateFiniteEffectNumber(options.from ?? 0.96, 'scale from'),
+      to: validateFiniteEffectNumber(options.to ?? 1, 'scale to'),
+    },
+    ['style-transform'],
+  );
 }

@@ -11,8 +11,12 @@ export type FadeOptions = {
 
 /** Fade each token between opacity values. */
 export function fade(options: FadeOptions = {}) {
-  return createTextMotionEffect('fade', {
-    from: validateFiniteEffectNumber(options.from ?? 0, 'fade from'),
-    to: validateFiniteEffectNumber(options.to ?? 1, 'fade to'),
-  });
+  return createTextMotionEffect(
+    'fade',
+    {
+      from: validateFiniteEffectNumber(options.from ?? 0, 'fade from'),
+      to: validateFiniteEffectNumber(options.to ?? 1, 'fade to'),
+    },
+    ['style-transform'],
+  );
 }

@@ -173,6 +173,53 @@ const LineReveal = defineTextMotion()
 
 `lines()` is experimental and newline-only. It splits on explicit `\n` characters. It does not measure automatic React Native line wrapping.
 
+### Rendered Line Reveal
+
+Use `overlayText()` with `lineReveal()` when the motion unit should be the line React Native actually rendered after width, font, font scale, alignment, language shaping, and wrapping are applied.
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const HeroLines = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function HeroTitle() {
+  return <HeroLines>Design motion that feels native</HeroLines>;
+}
+```
+
+Do not call `.split(...)` with `overlayText()`. `overlayText()` owns rendered lines after layout, while `nativeText()` consumes source word, grapheme, custom, or explicit newline tokens. TypeScript removes incompatible chains, and runtime capability checks reject unsafe JavaScript or casted combinations.
+
+Use rendered line reveal for responsive hero titles, marketing headings, onboarding headlines, and concise product copy where the final visual line breaks matter. Use `nativeText()` for word or grapheme motion. Use `lines()` only when authored `\n` breaks are the token boundary you want; it does not discover automatic wrapping.
+
+`overlayText()` also accepts the built-in style-transform effects (`fade`, `rise`, `slide`, `shake`, `scale`, and `pulse`) because they apply to each rendered line frame. `lineReveal()` is split internally: opacity belongs to the line frame, while the vertical reveal offset moves only the paragraph copy inside the line mask. This lets `lineReveal().and(scale())`, larger finite `scale()` values, and `pulse()` grow from the measured line center without being clipped by the renderer's own mask.
+
+Blank and whitespace-only rendered lines are preserved as visual spacing, but they do not consume a motion index. A title such as `"First\n\nSecond"` keeps the blank line while the two nonblank lines reveal in adjacent stagger slots.
+
+Relayout behavior is intentionally predictable:
+
+- identical line measurement does not replay
+- geometry-only relayout preserves the current run
+- a line topology change restarts component-owned playback once
+- external `progress` keeps the app-owned shared value and applies it to the new geometry
+- reduced motion renders final readable source text without measurement or playback overlays
+- malformed or unsupported native geometry falls back to readable final source text
+
+`overlayText()` creates one full paragraph copy per moving rendered line. Performance scales with visible rendered lines, not source word or grapheme count. Treat it as a title, heading, and product-copy renderer. Do not publish measured performance claims until the same case family has iOS and Android evidence.
+
+Before valid line geometry exists, the source paragraph remains responsible for layout. When the initial scale is exactly `1`, the pending source keeps the same combined initial opacity and transform users already see from other renderers. When the initial scale is not exactly `1`, the pending source is visually hidden until geometry is valid so the first visible scaled frame uses the measured line center.
+
+The renderer fixes self-clipping caused by its own line mask. It does not reserve extra layout space for large transforms and it cannot bypass clipping from a parent or ancestor with `overflow: hidden`; treat those as normal React Native transform limitations.
+
 ### Custom
 
 ```tsx
@@ -234,6 +281,7 @@ slide({ x: -12, y: 8 });
 scale({ from: 0.92, to: 1 });
 pulse({ scale: 1.08 });
 shake({ x: 6 });
+lineReveal({ y: 18 });
 ```
 
 Effects compose with `.and(...)`:
@@ -248,13 +296,15 @@ Effect factories validate their input options, but the returned effect is an opa
 
 Numeric built-in effect inputs must be finite numbers. Negative offsets are allowed where the option represents direction, such as `rise({ y })`, `slide({ x, y })`, and `shake({ x })`.
 
+`lineReveal()` requires the `line-mask` capability from `overlayText()`. It is not compatible with `nativeText()`.
+
 ## Native Renderer Contract
 
 `nativeText()` is the stable MVP renderer. Animated tokens use an animated `View` container with an inner `Text` so transform effects such as `rise()`, `slide()`, `scale()`, and `pulse()` are visible in React Native. Static tokens still render as plain `Text`.
 
 `nativeText()` returns an opaque renderer handle for `.layout(...)`. Descriptor fields such as `kind`, `capabilities`, and the implementation `Component` are intentionally hidden from the root user API.
 
-This is not a full React Native `Text` drop-in. It favors reliable per-token transforms over exact platform text layout. Full RN line-to-token mapping remains deferred.
+This is not a full React Native `Text` drop-in. It favors reliable per-token transforms over exact platform text layout. Use `overlayText()` when you need motion by actual rendered line. Full RN line-to-token mapping remains deferred.
 
 Components created with `nativeText()` intentionally support a narrow prop surface:
 
@@ -475,9 +525,9 @@ The fallback is designed for resilient UI motion, not full ICU-level locale segm
 - `defineTextMotion()`
 - `graphemes()`, `words()`, `custom()`
 - experimental newline-only `lines()`
-- `nativeText()`
+- `nativeText()`, `overlayText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
-- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`
+- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`
 - `useTextMotionControls()` with explicit `controls` prop for event-driven play/replay/reset/stop
 - controlled `progress` via external Reanimated shared values
 - parent-label accessibility policy with hidden animated token nodes
@@ -491,11 +541,9 @@ These are intentionally not stable exports in the MVP:
 
 - custom effect factory API
 - renderer capability factory API
-- `lineReveal`
 - `wipe`
 - `typewriter`
 - `scramble`
-- stable `overlayText`
 - Skia renderer or Skia-only effects
 - playback APIs such as `pause`, `seek`, or `reverse`
 - first-class screen focus, in-view, scroll, or gesture drivers
@@ -526,7 +574,7 @@ Core text-motion work should stay focused on:
 Advanced text effects can be considered when they still depend on text tokens or text layout:
 
 - typewriter, scramble, wipe, and highlight sweep effects
-- reliable line-aware reveal based on actual rendered layout, once RN layout measurement and token-to-line mapping policies are stable enough to document
+- word-in-line effects and RN-rendered line-to-token mapping when source range policies are stable enough to document
 - text-change transitions where old and new token sets need a clear playback policy
 
 Renderer-specific effects should stay behind renderer capability boundaries:
@@ -553,6 +601,7 @@ Use it today for:
 - reusable recipe components created from presets or `defineTextMotion()`
 - event-driven replay/reset/stop controls without remounting the component
 - raw progress with an external Reanimated shared value
+- rendered-line reveal for responsive hero titles, headings, and concise product copy
 - apps that already use Reanimated 4 and can follow its Worklets setup
 - accessible decorative text motion where the full phrase should remain readable once
 
@@ -560,12 +609,12 @@ Wait for a later version if your feature depends on:
 
 - playback APIs such as `pause`, `seek`, or `reverse`
 - scroll progress, gesture progress, or viewport/in-view triggers as first-class drivers
-- exact line-level animation, clipping, masking, or per-token line measurement
+- per-token line measurement or mixed word-in-line animation
 - Skia-only visual effects such as blur, glow, shaders, masks, or glyph distortion
 - rich nested text, inline links, selectable text, or exact native `Text` behavior
 - long paragraphs or many animated rows without measuring performance in your target app
 
-The next product focus is proving the controls API in real apps and then deciding whether state-transition props, `pause`/`seek`/`reverse`, screen focus helpers, in-view helpers, or scroll/gesture drivers deserve first-class APIs. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
+The next product focus is verifying line renderer performance and platform behavior, then deciding whether state-transition props, `pause`/`seek`/`reverse`, screen focus helpers, in-view helpers, scroll/gesture drivers, word-in-line effects, or Skia renderer candidates deserve first-class APIs. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
 
 ## Development
 

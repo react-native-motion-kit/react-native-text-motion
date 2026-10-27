@@ -4,8 +4,11 @@ import {
   defineTextMotion,
   fade,
   graphemes,
+  lineReveal,
   nativeText,
+  overlayText,
   parentLabelPolicy,
+  scale,
   stagger,
   useTextMotionControls,
   wave,
@@ -13,11 +16,28 @@ import {
   type TextMotionControls,
   type TextMotionComponentProps,
   type TextMotionEffect,
+  type TextMotionRenderer,
   type TextMotionRendererProps,
 } from '@react-native-motion-kit/text-motion';
 
+import type { TextMotionRecipeConfig } from '../types/recipe';
+
 import { createTextMotionEffect } from '../effects/compose';
+import { editorialRise, softWave } from '../presets';
+import { createTextMotionRendererHandle } from '../recipe/descriptors';
 import { createTextMotionRendererCapability } from '../types/renderer';
+
+const sourceTokenRenderer = createTextMotionRendererHandle({
+  kind: 'test-source-token',
+  capabilities: ['style-transform'],
+  Component: () => null,
+});
+const renderedLineRenderer = createTextMotionRendererHandle({
+  kind: 'test-rendered-line',
+  capabilities: ['style-transform'],
+  motionUnit: 'rendered-line',
+  Component: () => null,
+});
 
 describe('renderer capability types', () => {
   it('keeps capability checks in the TypeScript surface', () => {
@@ -192,9 +212,88 @@ function expectRendererHandlesDoNotExposeDescriptors() {
 
   // @ts-expect-error renderer handles do not expose implementation components.
   void renderer.Component;
+
+  // @ts-expect-error renderer handles do not expose internal motion units.
+  void renderer.motionUnit;
 }
 
 void expectRendererHandlesDoNotExposeDescriptors;
+
+function expectRendererMotionUnitCompatibility() {
+  const publicRendererAnnotation: TextMotionRenderer<'native-text' | 'style-transform'> =
+    nativeText();
+  const publicRecipeAnnotation: TextMotionRecipeConfig<'native-text' | 'style-transform'> =
+    defineTextMotion().layout(nativeText()).recipe();
+
+  void publicRendererAnnotation;
+  void publicRecipeAnnotation;
+
+  defineTextMotion().split(words()).layout(nativeText()).effect(fade()).component();
+  defineTextMotion().layout(nativeText()).split(words()).effect(fade()).component();
+  defineTextMotion().split(words()).layout(sourceTokenRenderer).effect(fade()).component();
+  defineTextMotion().layout(renderedLineRenderer).effect(fade()).component();
+  defineTextMotion().layout(overlayText()).effect(lineReveal()).component();
+  defineTextMotion()
+    .layout(overlayText())
+    .effect(lineReveal().and(scale({ from: 0.98 })));
+  defineTextMotion().split(words()).layout(nativeText()).layout(nativeText()).effect(fade());
+  defineTextMotion().layout(nativeText()).split(words()).layout(nativeText()).effect(fade());
+  defineTextMotion().layout(nativeText()).layout(overlayText()).effect(lineReveal());
+
+  // @ts-expect-error rendered-line renderers own rendered lines and cannot accept source splitters.
+  defineTextMotion().layout(renderedLineRenderer).split(words());
+
+  // @ts-expect-error splitter-selected builders reject rendered-line renderers.
+  defineTextMotion().split(words()).layout(renderedLineRenderer);
+
+  // @ts-expect-error overlayText owns rendered lines and cannot accept source splitters.
+  defineTextMotion().layout(overlayText()).split(words());
+
+  // @ts-expect-error splitter-selected builders reject overlayText.
+  defineTextMotion().split(words()).layout(overlayText());
+
+  // @ts-expect-error source-token layout replacement after split keeps rejecting overlayText.
+  defineTextMotion().split(words()).layout(nativeText()).layout(overlayText());
+
+  // @ts-expect-error source-token layout replacement after split keeps rejecting overlayText.
+  defineTextMotion().layout(nativeText()).split(words()).layout(overlayText());
+
+  // @ts-expect-error lineReveal requires line-mask, not nativeText.
+  defineTextMotion().split(words()).layout(nativeText()).effect(lineReveal());
+}
+
+void expectRendererMotionUnitCompatibility;
+
+function expectPresetSplitStateCompatibility() {
+  editorialRise().effect(fade()).component();
+  softWave().layout(nativeText()).effect(fade()).component();
+
+  // @ts-expect-error presets already include words(), so rendered-line replacement is rejected.
+  editorialRise().layout(overlayText());
+
+  // @ts-expect-error presets preserve splitter-present state through their exported return type.
+  softWave().layout(overlayText());
+}
+
+void expectPresetSplitStateCompatibility;
+
+function expectPublicTypesDoNotAcceptMotionUnitGenerics() {
+  // @ts-expect-error TextMotionRenderer does not expose a motion-unit generic parameter.
+  type RendererWithMotionUnit = TextMotionRenderer<'style-transform', unknown, unknown>;
+
+  // @ts-expect-error TextMotionRecipeConfig does not expose a motion-unit generic parameter.
+  type RecipeWithMotionUnit = TextMotionRecipeConfig<
+    'style-transform',
+    never,
+    readonly TextMotionEffect[],
+    unknown
+  >;
+
+  const useAliases = undefined as unknown as RendererWithMotionUnit | RecipeWithMotionUnit;
+  void useAliases;
+}
+
+void expectPublicTypesDoNotAcceptMotionUnitGenerics;
 
 function expectPublicRendererRecipeDoesNotWidenDescriptorOptions() {
   // @ts-expect-error public renderer props expose effect handles, not descriptors.

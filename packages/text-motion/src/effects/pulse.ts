@@ -9,7 +9,11 @@ export type PulseOptions = {
 
 /** Briefly emphasize each token by scaling it up and returning to its final scale. */
 export function pulse(options: PulseOptions = {}) {
-  return createTextMotionEffect('pulse', {
-    scale: validateFiniteEffectNumber(options.scale ?? 1.04, 'pulse scale'),
-  });
+  return createTextMotionEffect(
+    'pulse',
+    {
+      scale: validateFiniteEffectNumber(options.scale ?? 1.04, 'pulse scale'),
+    },
+    ['style-transform'],
+  );
 }

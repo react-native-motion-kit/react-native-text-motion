@@ -5,6 +5,7 @@ import type { TextMotionToken } from './token';
 
 declare const textMotionRendererCapabilityBrand: unique symbol;
 declare const textMotionRendererBrand: unique symbol;
+declare const textMotionRenderedLineRendererBrand: unique symbol;
 
 /** Branded renderer capability name for custom renderer packages. */
 export type TextMotionRendererCapabilityExtension<Name extends string = string> = Name & {
@@ -12,7 +13,13 @@ export type TextMotionRendererCapabilityExtension<Name extends string = string> 
 };
 
 /** Capability supported by a renderer and required by effects. */
-export type TextMotionRendererCapability = 'native-text' | TextMotionRendererCapabilityExtension;
+export type TextMotionRendererCapability =
+  | 'native-text'
+  | 'style-transform'
+  | TextMotionRendererCapabilityExtension;
+
+/** @internal Built-in capability used by overlayText line-mask effects. */
+export type TextMotionLineMaskCapability = TextMotionRendererCapabilityExtension<'line-mask'>;
 
 /** Create a branded capability name for a custom renderer. */
 export function createTextMotionRendererCapability<Name extends string>(
@@ -33,21 +40,39 @@ export type TextMotionRendererProps<Recipe = TextMotionRecipeConfig> = {
 export type TextMotionRendererDescriptor<
   Capabilities extends TextMotionRendererCapability = TextMotionRendererCapability,
   Recipe = TextMotionRecipeConfig,
+  MotionUnit extends 'source-token' | 'rendered-line' = 'source-token' | 'rendered-line',
 > = {
   kind: string;
   capabilities: readonly Capabilities[];
+  motionUnit?: MotionUnit;
   Component: ComponentType<TextMotionRendererProps<Recipe>>;
 };
 
 /** Renderer handle used by `.layout(...)`. */
 export type TextMotionRenderer<
   Capabilities extends TextMotionRendererCapability = TextMotionRendererCapability,
-  Recipe = TextMotionRecipeConfig,
+  Recipe = unknown,
 > = {
   readonly [textMotionRendererBrand]: {
     readonly capabilities: Capabilities;
     readonly recipe: Recipe;
   };
+};
+
+/** @internal Renderer handle for source-token renderers accepted after `.split(...)`. */
+export type TextMotionSourceTokenRenderer<
+  Capabilities extends TextMotionRendererCapability = TextMotionRendererCapability,
+  Recipe = unknown,
+> = TextMotionRenderer<Capabilities, Recipe> & {
+  readonly [textMotionRenderedLineRendererBrand]?: never;
+};
+
+/** @internal Renderer handle for renderers that own rendered-line layout. */
+export type TextMotionRenderedLineRenderer<
+  Capabilities extends TextMotionRendererCapability = TextMotionRendererCapability,
+  Recipe = unknown,
+> = TextMotionRenderer<Capabilities, Recipe> & {
+  readonly [textMotionRenderedLineRendererBrand]: 'rendered-line';
 };
 
 /** Capabilities required by an effect but missing from a renderer. */

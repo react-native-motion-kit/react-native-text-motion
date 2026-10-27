@@ -14,6 +14,8 @@ import type {
   TextMotionRenderer,
   TextMotionRendererCapability,
   TextMotionRendererDescriptor,
+  TextMotionRenderedLineRenderer,
+  TextMotionSourceTokenRenderer,
 } from '../types/renderer';
 import type {
   TextMotionSplitter,
@@ -28,6 +30,14 @@ const rendererDescriptors = new WeakMap<
   TextMotionRenderer<TextMotionRendererCapability, unknown>,
   TextMotionRendererDescriptor<TextMotionRendererCapability, unknown>
 >();
+
+type TextMotionRendererHandle<
+  Capabilities extends TextMotionRendererCapability,
+  Recipe,
+  MotionUnit extends 'source-token' | 'rendered-line',
+> = MotionUnit extends 'rendered-line'
+  ? TextMotionRenderedLineRenderer<Capabilities, Recipe>
+  : TextMotionSourceTokenRenderer<Capabilities, Recipe>;
 
 export function attachTextMotionEffectDescriptor<
   RequiredCapabilities extends TextMotionRendererCapability,
@@ -119,10 +129,11 @@ export function readTextMotionSplitterDescriptor<Unit extends TextMotionTokenUni
 export function createTextMotionRendererHandle<
   Capabilities extends TextMotionRendererCapability,
   Recipe,
+  MotionUnit extends 'source-token' | 'rendered-line' = 'source-token',
 >(
-  descriptor: TextMotionRendererDescriptor<Capabilities, Recipe>,
-): TextMotionRenderer<Capabilities, Recipe> {
-  const renderer = {} as TextMotionRenderer<Capabilities, Recipe>;
+  descriptor: TextMotionRendererDescriptor<Capabilities, Recipe, MotionUnit>,
+): TextMotionRendererHandle<Capabilities, Recipe, MotionUnit> {
+  const renderer = {} as TextMotionRendererHandle<Capabilities, Recipe, MotionUnit>;
   rendererDescriptors.set(
     renderer,
     descriptor as TextMotionRendererDescriptor<TextMotionRendererCapability, unknown>,

@@ -9,7 +9,11 @@ export type ShakeOptions = {
 
 /** Offset each token horizontally for a shake-like entrance. */
 export function shake(options: ShakeOptions = {}) {
-  return createTextMotionEffect('shake', {
-    x: validateFiniteEffectNumber(options.x ?? 4, 'shake x'),
-  });
+  return createTextMotionEffect(
+    'shake',
+    {
+      x: validateFiniteEffectNumber(options.x ?? 4, 'shake x'),
+    },
+    ['style-transform'],
+  );
 }

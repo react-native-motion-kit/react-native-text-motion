@@ -3,6 +3,7 @@ import {
   fade,
   parentLabelPolicy,
   rise,
+  words,
   type TextMotionMotionConfig,
   type TextMotionRenderer,
 } from '@react-native-motion-kit/text-motion';
@@ -12,9 +13,16 @@ import {
   readTextMotionEffectDescriptor,
 } from '../recipe/descriptors';
 
-const testRenderer: TextMotionRenderer<'native-text'> = createTextMotionRendererHandle({
-  kind: 'test-native-text',
-  capabilities: ['native-text'],
+const testRenderer: TextMotionRenderer<'native-text' | 'style-transform'> =
+  createTextMotionRendererHandle({
+    kind: 'test-native-text',
+    capabilities: ['native-text', 'style-transform'],
+    Component: () => null,
+  });
+const renderedLineRenderer = createTextMotionRendererHandle({
+  kind: 'test-rendered-line',
+  capabilities: ['style-transform'],
+  motionUnit: 'rendered-line',
   Component: () => null,
 });
 
@@ -43,7 +51,7 @@ describe('defineTextMotion', () => {
     expect(effect ? readTextMotionEffectDescriptor(effect).name : undefined).toBe('fade+rise');
     expect(
       effect ? readTextMotionEffectDescriptor(effect).requiredCapabilities : undefined,
-    ).toEqual(['native-text']);
+    ).toEqual(['style-transform']);
     expect(typeof Component).toBe('function');
   });
 
@@ -59,6 +67,18 @@ describe('defineTextMotion', () => {
     }) => unknown;
 
     expect(() => Component({ children: 42 })).toThrow('expects a string child');
+  });
+
+  it('rejects rendered-line renderers combined with splitters through unsafe paths', () => {
+    const Component = defineTextMotion()
+      .split(words())
+      .layout(renderedLineRenderer as unknown as typeof testRenderer)
+      .component();
+    const UnsafeComponent = Component as (props: { children: string }) => unknown;
+
+    expect(() => UnsafeComponent({ children: 'Unsafe split' })).toThrow(
+      'rendered-line renderers cannot be combined with .split(...)',
+    );
   });
 
   it('rejects non-finite numeric motion options before storing the recipe', () => {

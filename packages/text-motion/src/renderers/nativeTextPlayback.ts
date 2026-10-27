@@ -1,20 +1,8 @@
 import type { TextMotionMotionConfig } from '../types/recipe';
+import type { TextMotionItemMotion, TextMotionStyleTransformState } from './rendererMotion';
 
-export type NativeTextStyleState = {
-  opacity: number;
-  scale: number;
-  translateX: number;
-  translateY: number;
-};
-
-export type NativeTextTokenMotion = {
-  delayMs: number;
-  initial: NativeTextStyleState;
-  target: NativeTextStyleState;
-  motion?: TextMotionMotionConfig;
-  pulseScale: number;
-  reducedMotion: 'final-state' | 'system';
-};
+export type NativeTextStyleState = TextMotionStyleTransformState;
+export type NativeTextTokenMotion = TextMotionItemMotion;
 
 type NativeTextMotionOptionSnapshotValue =
   | null

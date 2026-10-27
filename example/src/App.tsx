@@ -3,8 +3,10 @@ import {
   defineTextMotion,
   fade,
   graphemes,
+  lineReveal,
   lines,
   nativeText,
+  overlayText,
   parallel,
   pulse,
   rise,
@@ -28,6 +30,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -256,6 +259,30 @@ const LineProbeMotionText = defineTextMotion()
   .motion({ kind: 'timing', options: { duration: 360 } })
   .component();
 
+const OverlayLineRevealText = defineTextMotion()
+  .layout(overlayText({ testIDPrefix: 'overlay-line' }))
+  .timeline(stagger(0.1))
+  .effect(lineReveal({ y: 18 }))
+  .component();
+
+const OverlayLineRevealScaleText = defineTextMotion()
+  .layout(overlayText({ testIDPrefix: 'overlay-line' }))
+  .timeline(stagger(0.1))
+  .effect(lineReveal({ y: 18 }).and(scale({ from: 1.25, to: 1 })))
+  .component();
+
+const OverlayPulseText = defineTextMotion()
+  .layout(overlayText({ testIDPrefix: 'overlay-line' }))
+  .timeline(stagger(0.1))
+  .effect(pulse({ scale: 1.05 }))
+  .component();
+
+const OverlayLargeScaleText = defineTextMotion()
+  .layout(overlayText({ testIDPrefix: 'overlay-line' }))
+  .timeline(stagger(0.1))
+  .effect(scale({ from: 1.5, to: 1 }))
+  .component();
+
 type ControlsStressCase = {
   Component: TextMotionComponent;
   id: string;
@@ -429,6 +456,17 @@ type LineProbeCase = {
   widthMode: 'comfortable' | 'narrow';
 };
 
+type LineRevealProbeCase = {
+  align: 'auto' | 'center' | 'right';
+  Component: TextMotionComponent;
+  id: string;
+  label: string;
+  lookFor: string;
+  note: string;
+  text: string;
+  widthMode: 'comfortable' | 'narrow';
+};
+
 type LineProbeLayoutInput = {
   lineText: string;
   measuredWidth: number;
@@ -500,6 +538,169 @@ const lineProbeCases: readonly LineProbeCase[] = [
     label: 'Narrow wrap risk',
     text: 'supercalifragilistic motion token boundary check',
     widthMode: 'narrow',
+  },
+];
+
+const lineRevealProbeCases: readonly LineRevealProbeCase[] = [
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'latin-two-line',
+    label: 'Short Latin title',
+    lookFor:
+      'Each rendered line should reveal inside its own band and settle exactly over the readable source paragraph.',
+    note: 'Observe the actual line count; wrapping can differ by platform, font, and width.',
+    text: 'Design motion that feels native across screens',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealScaleText,
+    id: 'line-reveal-scale',
+    label: 'Reveal + scale',
+    lookFor:
+      'The first and last glyphs should not be clipped by the line mask while scale shrinks to the final line.',
+    note: 'This combines mask-relative lineReveal with frame-level scale.',
+    text: 'Scale the rendered line without cutting edge glyphs',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayPulseText,
+    id: 'pulse-small',
+    label: 'Pulse 1.05',
+    lookFor:
+      'The pulse should grow from the actual line center without self-clipping at the left or right edge.',
+    note: 'Pulse is a frame transform; no reveal offset should move the paragraph copy.',
+    text: 'Pulse a rendered line while keeping the mask safe',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'center',
+    Component: OverlayLargeScaleText,
+    id: 'scale-large-stress',
+    label: 'Large scale stress',
+    lookFor:
+      'Use this as a clipping stress check: renderer self-clipping should be gone, but parent overflow or neighboring overlap can still clip.',
+    note: 'This large scale is for visual QA, not a recommended default animation.',
+    text: 'Large scale makes clipping problems visible quickly',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'width-reflow',
+    label: 'Width reflow',
+    lookFor:
+      'At progress 0.5, toggling Width should keep the current progress on the newly measured lines.',
+    note: 'Toggle Width; the actual rendered line count should change.',
+    text: 'Responsive hero copy should follow the rendered line breaks',
+    widthMode: 'comfortable',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'explicit-newline',
+    label: 'Explicit newline',
+    lookFor: 'Hard-authored line breaks should stay readable and not add extra motion for blanks.',
+    note: 'Hard line breaks stay visual, but motion follows rendered nonblank lines.',
+    text: 'First line is authored\nSecond line is authored',
+    widthMode: 'comfortable',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'middle-blank-line',
+    label: 'Middle blank line',
+    lookFor: 'The blank line should preserve vertical spacing without consuming a stagger slot.',
+    note: 'The blank line remains visible spacing and consumes no motion index.',
+    text: 'Opening line\n\nClosing line',
+    widthMode: 'comfortable',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'leading-newline',
+    label: 'Leading newline',
+    lookFor:
+      'Leading vertical space should remain readable while the first nonblank line animates first.',
+    note: 'Leading whitespace can preserve vertical space without delaying motion.',
+    text: '\nLeading space before a title',
+    widthMode: 'comfortable',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'trailing-newline',
+    label: 'Trailing newline',
+    lookFor: 'Trailing line breaks should not create duplicate text or a visible flash.',
+    note: 'Platform payloads may differ, but readable text should remain stable.',
+    text: 'Trailing line break stays readable\n',
+    widthMode: 'comfortable',
+  },
+  {
+    align: 'center',
+    Component: OverlayLineRevealText,
+    id: 'center-align',
+    label: 'Center alignment',
+    lookFor:
+      'Centered lines should animate around the measured line center without sideways drift.',
+    note: 'Centered line placement should match the final source paragraph.',
+    text: 'Centered lines reveal where React Native placed them',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'right',
+    Component: OverlayLineRevealText,
+    id: 'right-align',
+    label: 'Right alignment',
+    lookFor:
+      'Right-aligned lines should use their measured center and finish without horizontal drift.',
+    note: 'Right-aligned line placement should not drift during reveal.',
+    text: 'Right aligned product copy follows real layout',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'korean-cjk',
+    label: 'Korean / CJK',
+    lookFor:
+      'CJK line breaks should follow the native rendered payload instead of JS token guessing.',
+    note: 'CJK wrapping should come from native text layout, not JS guessing.',
+    text: '한글과 日本語 문장이 실제 렌더링 줄 기준으로 나타납니다',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'emoji-zwj',
+    label: 'Emoji / ZWJ',
+    lookFor:
+      'Emoji clusters should stay intact inside each rendered line through replay and reset.',
+    note: 'Emoji sequences should stay visually intact inside each rendered line.',
+    text: 'Teams 👨‍👩‍👧‍👦 build expressive motion ✨ for mobile',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'rtl',
+    label: 'RTL',
+    lookFor: 'Mixed-direction text should keep React Native shaping and not jump at progress 1.',
+    note: 'RTL shaping and ordering stay owned by React Native text layout.',
+    text: 'שלום עולם motion title with mixed direction',
+    widthMode: 'narrow',
+  },
+  {
+    align: 'auto',
+    Component: OverlayLineRevealText,
+    id: 'stress-six-line',
+    label: 'Stress boundary (~6-line target)',
+    lookFor: 'Replay should not create duplicate overlays, missing copies, or sustained stutter.',
+    note: 'Use the displayed line count as the result, not a performance claim.',
+    text: 'Line reveal is intended for titles headings and concise product copy where the number of rendered lines stays small enough to inspect directly on target devices before shipping broader surfaces.',
+    widthMode: 'comfortable',
   },
 ];
 
@@ -658,7 +859,14 @@ const demos: readonly Demo[] = [
     title: 'Spring Motion',
   },
   {
-    caption: 'private onTextLayout probe / hard newline visual check',
+    caption: 'overlayText() + lineReveal() public API probe',
+    groupId: 'layout',
+    id: 'overlay-line-reveal-probe',
+    text: 'Rendered line reveal probe',
+    title: 'Line Reveal',
+  },
+  {
+    caption: 'diagnostic line layout probe / hard newline visual check',
     groupId: 'layout',
     id: 'line-layout-probe',
     text: 'Measured line layout probe',
@@ -718,6 +926,10 @@ function nextLineProbeCaseIndex(index: number): number {
   return (index + 1) % lineProbeCases.length;
 }
 
+function nextLineRevealProbeCaseIndex(index: number): number {
+  return (index + 1) % lineRevealProbeCases.length;
+}
+
 function renderedLinesFromEvent(
   event: NativeSyntheticEvent<TextLayoutEventData>,
 ): readonly NativeTextRenderedLine[] {
@@ -729,6 +941,42 @@ function renderedLinesFromEvent(
     x: line.x,
     y: line.y,
   }));
+}
+
+function countVisibleMotionLines(renderedLineItems: readonly NativeTextRenderedLine[]): number {
+  return renderedLineItems.filter((line) => line.text.trim().length > 0).length;
+}
+
+function areRenderedLineCountsEqual(
+  previous: readonly NativeTextRenderedLine[],
+  next: readonly NativeTextRenderedLine[],
+): boolean {
+  if (previous.length !== next.length) {
+    return false;
+  }
+
+  return previous.every((line, index) => {
+    const nextLine = next[index];
+
+    return Boolean(
+      nextLine &&
+      line.text === nextLine.text &&
+      Math.round(line.y) === Math.round(nextLine.y) &&
+      Math.round(line.height) === Math.round(nextLine.height),
+    );
+  });
+}
+
+function createLineRevealTextAlignStyle(align: LineRevealProbeCase['align']) {
+  if (align === 'center') {
+    return styles.lineRevealTextCenter;
+  }
+
+  if (align === 'right') {
+    return styles.lineRevealTextRight;
+  }
+
+  return styles.lineRevealTextAuto;
 }
 
 function lineTextForSignature(renderedLines: readonly NativeTextRenderedLine[]): string {
@@ -1135,6 +1383,141 @@ function RendererPerformanceProbeDemo({ replaySignal }: { replaySignal: number }
   );
 }
 
+function LineRevealProbeDemo({ replaySignal }: { replaySignal: number }) {
+  const progress = useSharedValue(1);
+  const [caseIndex, setCaseIndex] = useState(0);
+  const [widthMode, setWidthMode] = useState<LineRevealProbeCase['widthMode']>(
+    lineRevealProbeCases[0].widthMode,
+  );
+  const [renderedLines, setRenderedLines] = useState<readonly NativeTextRenderedLine[]>([]);
+  const replaySignalRef = useRef(replaySignal);
+  const probeCase = lineRevealProbeCases[caseIndex] ?? lineRevealProbeCases[0];
+  const ProbeMotionText = probeCase.Component;
+  const lineTextAlignStyle = createLineRevealTextAlignStyle(probeCase.align);
+  const visibleMotionLineCount = countVisibleMotionLines(renderedLines);
+
+  function replayProgress() {
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 820 });
+  }
+
+  function resetProgress() {
+    progress.value = 0;
+  }
+
+  function stepProgress() {
+    const current = Number(progress.value);
+
+    if (!Number.isFinite(current) || current >= 1) {
+      progress.value = 0;
+      return;
+    }
+
+    progress.value = Math.min(1, Math.round((current + 0.25) * 100) / 100);
+  }
+
+  function advanceCase() {
+    const nextCaseIndex = nextLineRevealProbeCaseIndex(caseIndex);
+    const nextCase = lineRevealProbeCases[nextCaseIndex] ?? lineRevealProbeCases[0];
+
+    setRenderedLines([]);
+    setCaseIndex(nextCaseIndex);
+    setWidthMode(nextCase.widthMode);
+    replayProgress();
+  }
+
+  function handleTextLayout(event: NativeSyntheticEvent<TextLayoutEventData>) {
+    const nextLines = renderedLinesFromEvent(event);
+
+    setRenderedLines((currentLines) =>
+      areRenderedLineCountsEqual(currentLines, nextLines) ? currentLines : nextLines,
+    );
+  }
+
+  useEffect(() => {
+    if (replaySignalRef.current === replaySignal) {
+      return;
+    }
+
+    replaySignalRef.current = replaySignal;
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 820 });
+  }, [progress, replaySignal]);
+
+  return (
+    <View style={styles.lineRevealDemo}>
+      <View style={styles.lineProbeTopRow}>
+        <View style={styles.stageTitleGroup}>
+          <Text style={styles.stressMeta}>{probeCase.label}</Text>
+          <Text style={styles.stressMetaDetail}>{probeCase.note}</Text>
+        </View>
+        <Text style={styles.rendererProbeBadgeNormal}>PUBLIC</Text>
+      </View>
+
+      <View
+        style={[styles.lineRevealTextBox, widthMode === 'narrow' && styles.lineRevealTextBoxNarrow]}
+      >
+        <Text
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          onTextLayout={handleTextLayout}
+          style={[styles.lineRevealText, lineTextAlignStyle, styles.lineRevealMeasurementText]}
+        >
+          {probeCase.text}
+        </Text>
+        <ProbeMotionText progress={progress} style={[styles.lineRevealText, lineTextAlignStyle]}>
+          {probeCase.text}
+        </ProbeMotionText>
+      </View>
+
+      <View style={styles.lineProbeStats}>
+        <Text style={styles.lineProbeStatText}>rendered lines {renderedLines.length}</Text>
+        <Text style={styles.lineProbeStatText}>motion lines {visibleMotionLineCount}</Text>
+        <Text style={styles.lineProbeStatText}>animated overlays {visibleMotionLineCount}</Text>
+        <Text style={styles.lineProbeStatText}>paragraph copies {visibleMotionLineCount}</Text>
+      </View>
+
+      <View style={styles.lineProbeSection}>
+        <Text style={styles.lineProbeSectionLabel}>What to look for</Text>
+        <Text style={styles.lineRevealLookFor}>{probeCase.lookFor}</Text>
+      </View>
+
+      <View style={styles.progressControls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={replayProgress}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>Replay</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={resetProgress} style={styles.progressButton}>
+          <Text style={styles.progressButtonText}>Reset</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setWidthMode((currentMode) => (currentMode === 'narrow' ? 'comfortable' : 'narrow'));
+          }}
+          style={styles.progressButton}
+        >
+          <Text style={styles.progressButtonText}>
+            {widthMode === 'narrow' ? 'Widen' : 'Narrow'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.progressControls}>
+        <Pressable accessibilityRole="button" onPress={advanceCase} style={styles.progressButton}>
+          <Text style={styles.progressButtonText}>Case</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={stepProgress} style={styles.progressButton}>
+          <Text style={styles.progressButtonText}>Progress +25%</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function LineLayoutProbeDemo({ replaySignal }: { replaySignal: number }) {
   const controls = useTextMotionControls();
   const [caseIndex, setCaseIndex] = useState(0);
@@ -1401,6 +1784,7 @@ export default function App() {
   const controlsDemoSelected = demo.id === 'playback-controls';
   const controlsStressDemoSelected = demo.id === 'controls-stress';
   const controlledDemoSelected = demo.id === 'controlled-progress';
+  const lineRevealProbeSelected = demo.id === 'overlay-line-reveal-probe';
   const lineLayoutProbeSelected = demo.id === 'line-layout-probe';
   const rendererPerformanceProbeSelected = demo.id === 'renderer-performance-probe';
 
@@ -1412,7 +1796,8 @@ export default function App() {
           <Text style={styles.eyebrow}>@react-native-motion-kit/text-motion</Text>
           <Text style={styles.heading}>Motion player</Text>
           <Text style={styles.summary}>
-            Inspect motion recipes, playback behavior, and private layout probes one case at a time.
+            Inspect motion recipes, playback behavior, and diagnostic line layout probes one case at
+            a time.
           </Text>
         </View>
 
@@ -1449,13 +1834,19 @@ export default function App() {
             </Text>
           </View>
 
-          <View style={styles.motionFrame}>
+          <ScrollView
+            contentContainerStyle={styles.motionFrameContent}
+            key={demo.id}
+            style={styles.motionFrame}
+          >
             {controlsDemoSelected ? (
               <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
             ) : controlsStressDemoSelected ? (
               <ControlsStressDemo key={demo.id} replaySignal={replayKey} />
             ) : rendererPerformanceProbeSelected ? (
               <RendererPerformanceProbeDemo key={demo.id} replaySignal={replayKey} />
+            ) : lineRevealProbeSelected ? (
+              <LineRevealProbeDemo key={demo.id} replaySignal={replayKey} />
             ) : lineLayoutProbeSelected ? (
               <LineLayoutProbeDemo key={demo.id} replaySignal={replayKey} />
             ) : controlledDemoSelected ? (
@@ -1470,7 +1861,7 @@ export default function App() {
                 </MotionText>
               )
             )}
-          </View>
+          </ScrollView>
         </View>
 
         <View style={styles.controls}>
@@ -1672,12 +2063,59 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     width: '100%',
   },
-  motionFrame: {
+  lineRevealDemo: {
     alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  lineRevealLookFor: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    textAlign: 'center',
+  },
+  lineRevealMeasurementText: {
+    left: 0,
+    opacity: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  lineRevealText: {
+    color: '#111827',
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 29,
+  },
+  lineRevealTextAuto: {
+    textAlign: 'auto',
+  },
+  lineRevealTextBox: {
+    maxWidth: 360,
+    minHeight: 96,
+    position: 'relative',
+    width: '100%',
+  },
+  lineRevealTextBoxNarrow: {
+    maxWidth: 230,
+  },
+  lineRevealTextCenter: {
+    textAlign: 'center',
+  },
+  lineRevealTextRight: {
+    textAlign: 'right',
+  },
+  motionFrame: {
     flex: 1,
+  },
+  motionFrameContent: {
+    alignItems: 'center',
+    flexGrow: 1,
     justifyContent: 'center',
     minHeight: 210,
     paddingHorizontal: 18,
+    paddingVertical: 18,
   },
   motionText: {
     color: '#111827',
