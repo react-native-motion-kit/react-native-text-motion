@@ -1,6 +1,6 @@
 export { parentLabelPolicy } from './accessibility';
 export { useTextMotionControls } from './controls';
-export { fade, lineReveal, pulse, rise, scale, shake, slide } from './effects';
+export { fade, lineReveal, pulse, rise, scale, shake, slide, typewriter } from './effects';
 export { defineTextMotion } from './recipe';
 export { nativeText, overlayText } from './renderers';
 export { custom, graphemes, lines, words } from './split';

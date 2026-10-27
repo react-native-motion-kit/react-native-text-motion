@@ -65,6 +65,41 @@ describe('splitters', () => {
     expect(segments.map((segment) => segment.segment).join('')).toBe('👨‍👩‍👧‍👦 motion');
   });
 
+  it.each([
+    ['decomposed syllables', '\u1112\u1161\u11ab\u1100\u1173\u11af', ['한', '글']],
+    ['extended Jamo', '\ua960\ud7b0\ud7cb', ['\ua960\ud7b0\ud7cb']],
+    ['leading Jamo runs', '\u1100\u1102', ['\u1100\u1102']],
+    ['vowel and trailing runs', '\u1161\u1162\u11a8\u11ab', ['\u1161\u1162\u11a8\u11ab']],
+    ['precomposed LV with Jamo', '가\u1161\u11a8', ['가\u1161\u11a8']],
+    ['precomposed LVT with trailing Jamo', '\u1100각\u11a8', ['\u1100각\u11a8']],
+    ['leading and trailing without a vowel', '\u1100\u11a8', ['\u1100', '\u11a8']],
+    ['a vowel after a closed syllable', '각\u1161', ['각', '\u1161']],
+    ['compatibility Jamo', 'ㄱㅏ', ['ㄱ', 'ㅏ']],
+    ['a mark between Jamo', '\u1100\u0301\u1161', ['\u1100\u0301', '\u1161']],
+    ['a mark after a syllable', '\u1112\u1161\u11ab\u0301', ['\u1112\u1161\u11ab\u0301']],
+  ])('keeps Hangul grapheme boundaries without Intl: %s', (_name, input, expected) => {
+    const segments = fallbackSegments(input, 'grapheme');
+
+    expect(segments.map((segment) => segment.segment)).toEqual(expected);
+    expect(segments.map((segment) => segment.segment).join('')).toBe(input);
+  });
+
+  it('keeps original UTF-16 offsets around decomposed Hangul and emoji without normalizing', () => {
+    const input = 'A한👩🏽‍💻\r\n글';
+    const segments = fallbackSegments(input, 'grapheme');
+
+    expect(segments).toEqual([
+      { index: 0, segment: 'A' },
+      { index: 1, segment: '한' },
+      { index: 4, segment: '👩🏽‍💻' },
+      { index: 11, segment: '\r\n' },
+      { index: 13, segment: '글' },
+    ]);
+    segments.forEach(({ index, segment }) => {
+      expect(input.slice(index, index + segment.length)).toBe(segment);
+    });
+  });
+
   it('normalizes custom split output into tokens', () => {
     const tokens = readTextMotionSplitterDescriptor(
       custom((input) => input.match(/\S+/g) ?? []),

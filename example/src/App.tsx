@@ -8,6 +8,7 @@ import {
   nativeText,
   overlayText,
   parallel,
+  parentLabelPolicy,
   pulse,
   rise,
   scale,
@@ -15,6 +16,7 @@ import {
   shake,
   slide,
   stagger,
+  typewriter,
   useTextMotionControls,
   type TextMotionComponent,
   wave,
@@ -149,6 +151,17 @@ const ShakeEffect = defineTextMotion()
   .effect(shake({ x: 8 }).and(fade()))
   .component();
 
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+const typewriterDemoText = '안녕, \u1112\u1161\u11ab글! 👩🏽‍💻\n자리를 지키며 써요.';
+
 const StaggerTimeline = defineTextMotion()
   .split(words())
   .layout(nativeText())
@@ -242,6 +255,15 @@ const RendererProbeScaleGraphemeText = defineTextMotion()
   .timeline(stagger(0.005))
   .effect(scale({ from: 0.94 }).and(fade()))
   .motion({ kind: 'timing', options: { duration: 240 } })
+  .component();
+
+const RendererProbeFadeGraphemeText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
   .component();
 
 const RendererProbeProgressText = defineTextMotion()
@@ -406,10 +428,43 @@ const rendererProbeCases: readonly RendererProbeCase[] = [
     threshold: 'caution',
   },
   {
+    Component: RendererProbeFadeGraphemeText,
+    effectProfile: 'fade / 0ms timing / 40ms stagger',
+    id: 'graphemes-54-fade-controls',
+    label: 'Graphemes 54 instant fade',
+    motionTokenCount: 54,
+    playbackMode: 'controls',
+    splitLabel: 'graphemes()',
+    text: rendererProbeGraphemeText,
+    threshold: 'caution',
+  },
+  {
+    Component: TypewriterText,
+    effectProfile: 'typewriter / 0ms timing / 40ms stagger',
+    id: 'graphemes-54-typewriter-controls',
+    label: 'Graphemes 54 typewriter',
+    motionTokenCount: 54,
+    playbackMode: 'controls',
+    splitLabel: 'graphemes()',
+    text: rendererProbeGraphemeText,
+    threshold: 'caution',
+  },
+  {
     Component: RendererProbeScaleGraphemeText,
     effectProfile: 'scale + fade',
     id: 'graphemes-130-controls',
     label: 'Graphemes 130 replay',
+    motionTokenCount: 130,
+    playbackMode: 'controls',
+    splitLabel: 'graphemes()',
+    text: rendererProbeHeavyGraphemeText,
+    threshold: 'stress',
+  },
+  {
+    Component: TypewriterText,
+    effectProfile: 'typewriter / 0ms timing / 40ms stagger',
+    id: 'graphemes-130-typewriter-controls',
+    label: 'Graphemes 130 typewriter',
     motionTokenCount: 130,
     playbackMode: 'controls',
     splitLabel: 'graphemes()',
@@ -771,6 +826,14 @@ const demos: readonly Demo[] = [
     title: 'Custom',
   },
   {
+    Component: TypewriterText,
+    caption: 'typewriter() / 40ms per letter / fixed layout',
+    groupId: 'effects',
+    id: 'typewriter',
+    text: typewriterDemoText,
+    title: 'Typewriter',
+  },
+  {
     Component: FadeEffect,
     caption: 'fade()',
     groupId: 'effects',
@@ -878,6 +941,14 @@ const demos: readonly Demo[] = [
     id: 'playback-controls',
     text: 'Controls replay without remounting',
     title: 'Playback Controls',
+  },
+  {
+    Component: TypewriterText,
+    caption: 'typewriter() + controls={controls}',
+    groupId: 'playback',
+    id: 'typewriter-controls',
+    text: typewriterDemoText,
+    title: 'Typewriter Controls',
   },
   {
     caption: 'manual fan-out check',
@@ -1154,7 +1225,15 @@ function createStableSignatureLines(
   }));
 }
 
-function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; text: string }) {
+function ControlsPlaybackDemo({
+  Component = ControlsPlaybackText,
+  replaySignal,
+  text,
+}: {
+  Component?: TextMotionComponent;
+  replaySignal: number;
+  text: string;
+}) {
   const controls = useTextMotionControls();
   const replaySignalRef = useRef(replaySignal);
 
@@ -1169,9 +1248,9 @@ function ControlsPlaybackDemo({ replaySignal, text }: { replaySignal: number; te
 
   return (
     <View style={styles.controlledDemo}>
-      <ControlsPlaybackText controls={controls} style={styles.motionText}>
+      <Component controls={controls} style={styles.motionText}>
         {text}
-      </ControlsPlaybackText>
+      </Component>
 
       <View style={styles.progressControls}>
         <Pressable
@@ -1781,7 +1860,7 @@ export default function App() {
   const [replayKey, setReplayKey] = useState(0);
   const demo = demos[demoIndex] ?? demos[0];
   const MotionText = demo.Component;
-  const controlsDemoSelected = demo.id === 'playback-controls';
+  const controlsDemoSelected = demo.id === 'playback-controls' || demo.id === 'typewriter-controls';
   const controlsStressDemoSelected = demo.id === 'controls-stress';
   const controlledDemoSelected = demo.id === 'controlled-progress';
   const lineRevealProbeSelected = demo.id === 'overlay-line-reveal-probe';
@@ -1840,7 +1919,12 @@ export default function App() {
             style={styles.motionFrame}
           >
             {controlsDemoSelected ? (
-              <ControlsPlaybackDemo key={demo.id} replaySignal={replayKey} text={demo.text} />
+              <ControlsPlaybackDemo
+                Component={MotionText}
+                key={demo.id}
+                replaySignal={replayKey}
+                text={demo.text}
+              />
             ) : controlsStressDemoSelected ? (
               <ControlsStressDemo key={demo.id} replaySignal={replayKey} />
             ) : rendererPerformanceProbeSelected ? (

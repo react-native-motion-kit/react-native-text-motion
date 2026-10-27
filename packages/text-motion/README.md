@@ -282,6 +282,7 @@ scale({ from: 0.92, to: 1 });
 pulse({ scale: 1.08 });
 shake({ x: 6 });
 lineReveal({ y: 18 });
+typewriter();
 ```
 
 Effects compose with `.and(...)`:
@@ -297,6 +298,70 @@ Effect factories validate their input options, but the returned effect is an opa
 Numeric built-in effect inputs must be finite numbers. Negative offsets are allowed where the option represents direction, such as `rise({ y })`, `slide({ x, y })`, and `shake({ x })`.
 
 `lineReveal()` requires the `line-mask` capability from `overlayText()`. It is not compatible with `nativeText()`.
+
+## Typewriter
+
+Use `typewriter()` for short greetings, onboarding copy, or labels that should appear one character at a time while keeping the completed phrase's space and line breaks in place. It is an effect imported from the package root, with no options; it is not a preset or a separate renderer.
+
+```tsx
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+  useTextMotionControls,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
+      <Button title="Replay" onPress={controls.replay} />
+    </>
+  );
+}
+```
+
+`stagger(0.04)` uses seconds, so visible characters start 40ms apart. The first character appears on the first playback update; whitespace and hard newlines keep their layout space without taking a delay slot, and punctuation takes a slot like any other character. Actual display times follow device frames. `duration: 0` makes the default reveal instant for each character in autoplay and controls-driven playback.
+
+Use the existing controls to replay, reset, or stop typing. `stop()` keeps the current state; `play()` afterward does not promise an exact continuation of the remaining typing schedule. To type a different phrase completely from the start, remount it with a new React `key`. Appending text is not a streaming API.
+
+For external playback, pass `progress={progress}` instead of `controls`. `.motion()` is ignored for that instance. **Progress describes the effect timeline, not the percentage of characters shown:** with ten visible characters and `stagger(0.05)`, all characters are shown once progress exceeds about `0.310345`, so `0.5` does not mean five characters. Decreasing progress can hide characters again. Use a linear external timing curve when you want evenly spaced threshold crossings in time.
+
+`typewriter()` can combine with `rise()` or `fade()`. Each character stays hidden until its local progress becomes positive, then the other effects continue normally; adding `fade()` intentionally makes its appearance gradual. The visibility rule works in either composition order. For a visible movement after each character appears, use a nonzero `.motion()` duration.
+
+This effect supports `nativeText()` only. It preserves that renderer's completed token layout; it does not provide exact single-`Text` shaping or line wrapping, a cursor, growing/deleting the underlying string, or streaming. The built-in grapheme fallback now keeps decomposed Hangul syllable sequences such as `한` together without normalizing the source, but it does not implement all Unicode grapheme rules. Complex scripts can still need an app-provided `Intl.Segmenter` or `custom()` splitter. Measure long text and many rows on your target devices before treating them as supported workloads.
+
+### Choosing the reveal and motion
+
+`typewriter()` does not choose the splitter or own typing speed. Keep `graphemes()` for character-by-character motion, or use `words()` when whole words should appear together. The timeline owns the start delays, and `.motion()` owns each token's optional motion in autoplay or controls mode. A different stagger origin or `wave()` follows that timeline's order rather than promising start-to-end typing.
+
+For example, this effect and motion pair makes each character appear and then rise for 120ms:
+
+```tsx
+.effect(typewriter().and(rise({ y: 6 })))
+.motion({ kind: 'timing', options: { duration: 120 } })
+```
+
+Combining with `fade()` preserves its opacity animation, while Typewriter still prevents characters from showing before they start. Adding `typewriter()` twice does not create a second reveal or another playback clock.
+
+With external `progress`, `0` hides the animated characters and `1` renders the final state. The existing mapping uses a token span of `1.0`: for a token delay `d` and the largest delay `D`, local progress is `clamp(progress * (D + 1) - d, 0, 1)`. A character is shown when that local value is greater than zero. There is no remembered maximum progress, so moving backward past a character's start hides it again. A spring overshooting `1` alone does not hide an already started character; it must move back across the character's start threshold.
+
+The example's `parentLabelPolicy({ reducedMotion: 'final-state' })` keeps the complete sentence readable when reduced motion is enabled, including an externally controlled instance whose progress is still `0`. The parent exposes the full phrase once to screen readers and the decorative character nodes remain hidden; no per-character announcements are emitted.
 
 ## Native Renderer Contract
 
@@ -518,6 +583,8 @@ const ReducedReveal = defineTextMotion()
 
 React Native/Hermes does not guarantee `Intl.Segmenter` in every runtime. The built-in splitters detect it first and use it when available. When it is missing, `graphemes()` and `words()` fall back to a small internal tokenizer so animations do not crash at app startup.
 
+The grapheme fallback keeps decomposed Hangul syllable sequences such as `한` together, including syllable boundaries involving precomposed Hangul and Jamo, without normalizing or rewriting the source text. It does not implement every Unicode grapheme rule: some Indic conjuncts such as `क्ष` can still split. Per-token rendering also does not guarantee the shaping or ligatures of a single native `Text`.
+
 The fallback is designed for resilient UI motion, not full ICU-level locale segmentation. Apps that need exact locale-aware word boundaries, especially for scripts with complex word breaking, should load an `Intl.Segmenter` polyfill such as `@formatjs/intl-segmenter` in the app entrypoint before rendering text motion components, or pass a `custom()` splitter for product-specific tokenization.
 
 ## Stable MVP
@@ -527,7 +594,7 @@ The fallback is designed for resilient UI motion, not full ICU-level locale segm
 - experimental newline-only `lines()`
 - `nativeText()`, `overlayText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
-- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`
+- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`, `typewriter()`
 - `useTextMotionControls()` with explicit `controls` prop for event-driven play/replay/reset/stop
 - controlled `progress` via external Reanimated shared values
 - parent-label accessibility policy with hidden animated token nodes
@@ -542,7 +609,6 @@ These are intentionally not stable exports in the MVP:
 - custom effect factory API
 - renderer capability factory API
 - `wipe`
-- `typewriter`
 - `scramble`
 - Skia renderer or Skia-only effects
 - playback APIs such as `pause`, `seek`, or `reverse`
@@ -573,7 +639,7 @@ Core text-motion work should stay focused on:
 
 Advanced text effects can be considered when they still depend on text tokens or text layout:
 
-- typewriter, scramble, wipe, and highlight sweep effects
+- scramble, wipe, and highlight sweep effects
 - word-in-line effects and RN-rendered line-to-token mapping when source range policies are stable enough to document
 - text-change transitions where old and new token sets need a clear playback policy
 
@@ -598,6 +664,7 @@ Use it today for:
 
 - hero titles, section titles, short labels, onboarding copy, and product descriptions
 - word or grapheme entrance motion with `fade`, `rise`, `slide`, `scale`, `pulse`, or `shake`
+- character-by-character Typewriter reveals that keep the completed phrase's layout
 - reusable recipe components created from presets or `defineTextMotion()`
 - event-driven replay/reset/stop controls without remounting the component
 - raw progress with an external Reanimated shared value

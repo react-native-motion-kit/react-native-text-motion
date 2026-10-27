@@ -435,6 +435,7 @@ function useNativeTextAnimatedStyle(options: NativeTextAnimatedStyleOptions) {
   const targetTranslateX = tokenMotion.target.translateX;
   const targetTranslateY = tokenMotion.target.translateY;
   const pulseScale = tokenMotion.pulseScale;
+  const revealOnStart = tokenMotion.revealOnStart === true;
   const itemDelaySeconds = controlled ? options.controlledProgressPlan.itemDelaySeconds : 0;
   const totalTimelineSpan = controlled ? options.controlledProgressPlan.totalTimelineSpan : 1;
 
@@ -455,7 +456,10 @@ function useNativeTextAnimatedStyle(options: NativeTextAnimatedStyleOptions) {
     const pulseMultiplier = 1 + (pulseScale - 1) * pulseProgress;
 
     return {
-      opacity: initialOpacity + (targetOpacity - initialOpacity) * current,
+      opacity:
+        revealOnStart && current <= 0
+          ? 0
+          : initialOpacity + (targetOpacity - initialOpacity) * current,
       transform: [
         {
           translateX: initialTranslateX + (targetTranslateX - initialTranslateX) * current,
@@ -477,6 +481,7 @@ function useNativeTextAnimatedStyle(options: NativeTextAnimatedStyleOptions) {
     progress,
     pulseScale,
     renderFinalState,
+    revealOnStart,
     targetOpacity,
     targetScale,
     targetTranslateX,

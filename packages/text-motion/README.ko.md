@@ -283,6 +283,7 @@ scale({ from: 0.92, to: 1 });
 pulse({ scale: 1.08 });
 shake({ x: 6 });
 lineReveal({ y: 18 });
+typewriter();
 ```
 
 Effect는 `.and(...)`로 조합할 수 있습니다.
@@ -298,6 +299,70 @@ Effect factory는 입력 options를 타입으로 검증하지만, 반환되는 e
 Built-in effect의 숫자 입력은 finite number여야 합니다. `rise({ y })`, `slide({ x, y })`, `shake({ x })`처럼 방향을 의미하는 offset option은 음수도 허용합니다.
 
 `lineReveal()`은 `overlayText()`가 제공하는 `line-mask` capability가 필요합니다. `nativeText()`와는 호환되지 않습니다.
+
+## Typewriter
+
+짧은 인사말, 온보딩 문구, 라벨을 한 글자씩 보여주면서 완성 문장의 공간과 줄바꿈을 유지하고 싶다면 `typewriter()`를 사용하세요. 패키지 root에서 가져오는 옵션 없는 effect이며, preset이나 별도 renderer가 아닙니다.
+
+```tsx
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+  useTextMotionControls,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
+      <Button title="Replay" onPress={controls.replay} />
+    </>
+  );
+}
+```
+
+`stagger(0.04)`의 단위는 초이므로 보이는 글자가 40ms 간격으로 시작합니다. 첫 글자는 첫 playback update에서 나타납니다. 공백과 명시적인 줄바꿈은 자리를 유지하되 delay slot을 소비하지 않고, 문장부호는 일반 글자처럼 slot을 하나 소비합니다. 실제 표시 시각은 기기의 프레임에 맞춰집니다. `duration: 0`은 autoplay와 controls 재생에서 각 글자를 즉시 드러냅니다.
+
+기존 controls로 replay, reset, stop을 실행할 수 있습니다. `stop()`은 현재 상태를 유지하지만, 이후 `play()`가 남은 타이핑 일정을 정확히 이어 주는 것은 아닙니다. 다른 문장을 처음부터 모두 다시 타이핑하려면 React `key`를 바꿔 remount하세요. 텍스트 append는 streaming API가 아닙니다.
+
+외부 재생에는 `controls` 대신 `progress={progress}`를 전달합니다. 해당 instance에서는 `.motion()`을 실행하지 않습니다. **Progress는 표시된 글자의 비율이 아니라 effect timeline의 진행률입니다.** 보이는 글자 10개에 `stagger(0.05)`를 쓰면 progress가 약 `0.310345`를 넘을 때 모두 드러나므로, `0.5`가 다섯 글자를 뜻하지 않습니다. Progress를 줄이면 글자가 다시 숨겨질 수 있습니다. 실제 시간상 일정한 간격으로 드러내려면 외부 timing curve를 linear로 설정하세요.
+
+`typewriter()`에 `rise()`나 `fade()`를 조합할 수도 있습니다. 각 글자는 local progress가 양수가 될 때까지 숨겨지고, 시작한 뒤에는 다른 effect가 계속 적용됩니다. `fade()`를 더하면 의도적으로 서서히 나타납니다. 조합 순서를 바꿔도 이 표시 규칙은 유지됩니다. 글자가 나타난 뒤 움직이는 모습까지 보이려면 `.motion()`에 0보다 큰 duration을 지정하세요.
+
+이 effect는 `nativeText()`만 지원합니다. 해당 renderer가 만든 완성 token layout을 유지하며, 단일 `Text`와 같은 조판·줄바꿈, 커서, 실제 문자열의 글자별 추가·삭제, streaming은 제공하지 않습니다. 내장 grapheme fallback은 이제 `한` 같은 분해 한글 음절을 원문 정규화 없이 한 단위로 보존하지만, Unicode 전체 grapheme 규칙을 구현한 것은 아닙니다. 복잡한 script에는 앱이 제공하는 `Intl.Segmenter`나 `custom()` splitter가 필요할 수 있습니다. 긴 문장이나 많은 row는 target device에서 먼저 성능을 측정하세요.
+
+### 등장 방식과 motion 선택
+
+`typewriter()`는 splitter를 바꾸거나 타이핑 속도를 소유하지 않습니다. 글자별로 보여 주려면 `graphemes()`, 단어별로 보여 주려면 `words()`를 선택하세요. Timeline은 시작 간격을 정하고, `.motion()`은 autoplay 또는 controls mode에서 각 token의 부가 motion을 정합니다. Stagger origin을 바꾸거나 `wave()`를 사용하면 해당 timeline 순서로 나타나며, 앞에서부터 타이핑하는 순서를 보장하지 않습니다.
+
+예를 들어 다음 effect와 motion을 사용하면 글자가 나타난 뒤 120ms 동안 위로 움직입니다.
+
+```tsx
+.effect(typewriter().and(rise({ y: 6 })))
+.motion({ kind: 'timing', options: { duration: 120 } })
+```
+
+`fade()`와 조합하면 opacity animation은 그대로 적용되면서 시작 전의 글자는 숨겨집니다. `typewriter()`를 두 번 조합해도 표시 동작이나 playback clock이 하나 더 생기지 않습니다.
+
+외부 `progress`에서 `0`은 animated 글자를 숨기고 `1`은 최종 상태를 렌더링합니다. 기존 mapping은 token span `1.0`을 사용합니다. Token delay가 `d`, 가장 큰 delay가 `D`라면 local progress는 `clamp(progress * (D + 1) - d, 0, 1)`이며, 이 값이 양수인 글자를 보여 줍니다. 최대 progress를 기억하지 않으므로 각 글자의 시작 지점 이전으로 되돌리면 다시 숨겨집니다. Spring이 `1`을 overshoot하는 것만으로 이미 나타난 글자가 숨겨지지는 않고, 해당 글자의 시작 threshold를 역방향으로 지나야 합니다.
+
+예제의 `parentLabelPolicy({ reducedMotion: 'final-state' })`는 reduced motion이 켜지면 완성 문장을 보여 줍니다. 외부 progress가 아직 `0`인 instance에도 적용됩니다. Screen reader에는 부모의 전체 문장이 한 번 노출되고 장식용 글자 node는 숨겨지며, 글자마다 읽기 알림을 보내지 않습니다.
 
 ## Native Renderer Contract
 
@@ -519,6 +584,8 @@ const ReducedReveal = defineTextMotion()
 
 React Native/Hermes 환경에서는 `Intl.Segmenter`가 항상 보장되지 않습니다. 내장 splitter는 먼저 런타임의 `Intl.Segmenter`를 감지해서 사용하고, 없으면 작은 내부 tokenizer로 fallback합니다. 그래서 앱 시작 시 animation이 crash하지 않습니다.
 
+Grapheme fallback은 `한` 같은 분해 한글 음절과 완성형 한글·자모가 이어지는 음절 경계를 원문 정규화나 변경 없이 보존합니다. Unicode 전체 grapheme 규칙을 구현한 것은 아니므로 `क्ष` 같은 일부 인도계 결합 문자는 여전히 나뉠 수 있습니다. Token별 렌더링도 단일 native `Text`의 조판이나 ligature를 보장하지는 않습니다.
+
 이 fallback은 UI motion의 안정성을 위한 것이지, full ICU 수준의 locale segmentation을 목표로 하지 않습니다. 정확한 locale-aware word boundary가 필요한 앱, 특히 복잡한 word breaking이 필요한 script를 다루는 앱은 app entrypoint에서 `@formatjs/intl-segmenter` 같은 polyfill을 로드하거나 제품에 맞는 `custom()` splitter를 사용해야 합니다.
 
 ## Stable MVP
@@ -528,7 +595,7 @@ React Native/Hermes 환경에서는 `Intl.Segmenter`가 항상 보장되지 않�
 - experimental newline-only `lines()`
 - `nativeText()`, `overlayText()`
 - `stagger()`, `sequence()`, `parallel()`, `wave()`
-- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`
+- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`, `typewriter()`
 - 명시적인 `controls` prop과 `useTextMotionControls()` 기반 play/replay/reset/stop
 - external Reanimated shared value 기반 controlled `progress`
 - hidden animated token node를 사용하는 parent-label accessibility policy
@@ -543,7 +610,6 @@ Custom effect factory와 renderer capability factory는 MVP root API에서 의�
 - custom effect factory API
 - renderer capability factory API
 - `wipe`
-- `typewriter`
 - `scramble`
 - Skia renderer 또는 Skia-only effects
 - `pause`, `seek`, `reverse` 같은 추가 playback API
@@ -574,7 +640,7 @@ Core text-motion 작업은 다음에 집중해야 합니다.
 
 Advanced text effect는 여전히 text token 또는 text layout에 의존할 때 고려할 수 있습니다.
 
-- typewriter, scramble, wipe, highlight sweep effect
+- scramble, wipe, highlight sweep effect
 - source range 정책이 안정된 뒤 다룰 수 있는 word-in-line effect와 RN-rendered line-to-token mapping
 - old/new token set의 playback policy가 필요한 text-change transition
 
@@ -599,6 +665,7 @@ Renderer-specific effect는 renderer capability boundary 뒤에 둬야 합니다
 
 - hero title, section title, 짧은 label, onboarding copy, product description
 - `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`를 조합한 word/grapheme entrance motion
+- 완성 문장의 배치를 유지하면서 한 글자씩 드러나는 Typewriter
 - preset이나 `defineTextMotion()`으로 재사용 가능한 recipe component를 만들고 싶은 경우
 - component를 remount하지 않고 replay/reset/stop을 실행해야 하는 경우
 - external Reanimated shared value로 text motion progress를 직접 제어해야 하는 경우

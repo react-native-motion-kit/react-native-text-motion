@@ -159,13 +159,60 @@ Responsive hero title, section heading, 짧은 product copy처럼 실제 시각�
 
 `overlayText()`는 rendered line frame에 적용되는 built-in style-transform effect(`fade`, `rise`, `slide`, `shake`, `scale`, `pulse`)도 받습니다. 내부적으로 `lineReveal()`은 opacity를 line frame에 적용하고, vertical reveal offset만 line mask 안의 paragraph copy에 적용합니다. 그래서 `lineReveal().and(scale())` 또는 `pulse()` 조합은 measured line center를 기준으로 커지며 renderer 자신의 line mask에 잘리지 않습니다.
 
+## Typewriter
+
+짧은 인사말, 온보딩 문구, 라벨을 한 글자씩 보여주면서 완성 문장의 공간과 줄바꿈을 유지하고 싶다면 `typewriter()`를 사용하세요. 패키지 root에서 가져오는 옵션 없는 effect이며, preset이나 별도 renderer가 아닙니다.
+
+```tsx
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+  useTextMotionControls,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
+      <Button title="Replay" onPress={controls.replay} />
+    </>
+  );
+}
+```
+
+`stagger(0.04)`의 단위는 초이므로 보이는 글자가 40ms 간격으로 시작합니다. 첫 글자는 첫 playback update에서 나타납니다. 공백과 명시적인 줄바꿈은 자리를 유지하되 delay slot을 소비하지 않고, 문장부호는 일반 글자처럼 slot을 하나 소비합니다. 실제 표시 시각은 기기의 프레임에 맞춰집니다. `duration: 0`은 autoplay와 controls 재생에서 각 글자를 즉시 드러냅니다.
+
+기존 controls로 replay, reset, stop을 실행할 수 있습니다. `stop()`은 현재 상태를 유지하지만, 이후 `play()`가 남은 타이핑 일정을 정확히 이어 주는 것은 아닙니다. 다른 문장을 처음부터 모두 다시 타이핑하려면 React `key`를 바꿔 remount하세요. 텍스트 append는 streaming API가 아닙니다.
+
+외부 재생에는 `controls` 대신 `progress={progress}`를 전달합니다. 해당 instance에서는 `.motion()`을 실행하지 않습니다. **Progress는 표시된 글자의 비율이 아니라 effect timeline의 진행률입니다.** 보이는 글자 10개에 `stagger(0.05)`를 쓰면 progress가 약 `0.310345`를 넘을 때 모두 드러나므로, `0.5`가 다섯 글자를 뜻하지 않습니다. Progress를 줄이면 글자가 다시 숨겨질 수 있습니다. 실제 시간상 일정한 간격으로 드러내려면 외부 timing curve를 linear로 설정하세요.
+
+`typewriter()`에 `rise()`나 `fade()`를 조합할 수도 있습니다. 각 글자는 local progress가 양수가 될 때까지 숨겨지고, 시작한 뒤에는 다른 effect가 계속 적용됩니다. `fade()`를 더하면 의도적으로 서서히 나타납니다. 조합 순서를 바꿔도 이 표시 규칙은 유지됩니다. 글자가 나타난 뒤 움직이는 모습까지 보이려면 `.motion()`에 0보다 큰 duration을 지정하세요.
+
+이 effect는 `nativeText()`만 지원합니다. 해당 renderer가 만든 완성 token layout을 유지하며, 단일 `Text`와 같은 조판·줄바꿈, 커서, 실제 문자열의 글자별 추가·삭제, streaming은 제공하지 않습니다. 내장 grapheme fallback은 이제 `한` 같은 분해 한글 음절을 원문 정규화 없이 한 단위로 보존하지만, Unicode 전체 grapheme 규칙을 구현한 것은 아닙니다. 복잡한 script에는 앱이 제공하는 `Intl.Segmenter`나 `custom()` splitter가 필요할 수 있습니다. 긴 문장이나 많은 row는 target device에서 먼저 성능을 측정하세요.
+
 ## Stable MVP Scope
 
 - recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
 - splitters: `graphemes`, `words`, `custom`, experimental newline-only `lines`
 - renderers: `nativeText`, `overlayText`
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
-- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`
+- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`, `typewriter`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
 - event-driven play/replay/reset/stop을 위한 명시적인 playback `controls`
 - external Reanimated shared value 기반 controlled progress
@@ -198,7 +245,7 @@ Skia, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다. 
 
 `text-motion`은 split text motion에 집중합니다. 즉 tokenization, layout-aware timing, effect, renderer, split token playback, accessibility, 그리고 title, label, onboarding copy, product copy를 위한 preset이 핵심입니다.
 
-Text token 또는 text layout에 의존하는 기능은 이 패키지에서 고려할 수 있습니다. 예를 들면 typewriter, scramble, wipe, text-change transition, mask나 word-in-line effect 같은 향후 rendered-line extension, 그리고 명시적인 capability boundary 뒤에 있는 renderer-specific effect가 있습니다.
+Text token 또는 text layout에 의존하는 기능은 이 패키지에서 고려할 수 있습니다. 예를 들면 scramble, wipe, text-change transition, mask나 word-in-line effect 같은 향후 rendered-line extension, 그리고 명시적인 capability boundary 뒤에 있는 renderer-specific effect가 있습니다.
 
 다른 문제를 푸는 기능은 별도 package가 더 적합할 가능성이 큽니다. Number count-up, odometer, currency, percentage, timer, delta animation은 split-text layout 문제가 아니라 value formatting 문제입니다. 나중에 별도의 value-motion 계열 package가 Motion Kit convention을 공유할 수 있지만, 그 때문에 `text-motion` API surface를 넓히지는 않습니다.
 
@@ -242,6 +289,7 @@ corepack pnpm run example:build
 
 - title, label, onboarding copy, product copy처럼 짧은 React Native 텍스트에 entrance motion을 넣고 싶을 때
 - Reanimated 기반 word-level 또는 grapheme-level reveal effect가 필요할 때
+- 완성 문장의 배치를 유지하면서 한 글자씩 드러나는 Typewriter가 필요할 때
 - 일회성 animation prop보다 재사용 가능한 motion recipe를 만들고 싶을 때
 - screen reader가 split token을 하나씩 읽지 않고 문장을 한 번만 읽어야 할 때
 - button, screen focus, onboarding step에서 remount 없이 replay/reset/stop을 실행하고 싶을 때

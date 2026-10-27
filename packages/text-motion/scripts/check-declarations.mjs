@@ -3,8 +3,11 @@ import { join } from 'node:path';
 
 const checkedDeclarationFiles = [
   'lib/typescript/src/effects/lineReveal.d.ts',
+  'lib/typescript/src/effects/typewriter.d.ts',
+  'lib/typescript/src/index.d.ts',
   'lib/typescript/src/recipe/recipe.d.ts',
   'lib/typescript/src/renderers/index.d.ts',
+  'lib/typescript/src/renderers/nativeText.d.ts',
   'lib/typescript/src/renderers/overlayText.d.ts',
   'lib/typescript/src/types/renderer.d.ts',
 ];
@@ -24,6 +27,7 @@ const forbiddenPatterns = [
   /\bTextMotionOverlayStyleTransformStatePair\b/,
   /\bcreateOverlayTextStyleTransformStatePair\b/,
   /\brevealContent\b/,
+  /\brevealOnStart\b/,
 ];
 const forbiddenPublicOwnershipPatterns = [/\bsplitter\?\s*:\s*never\b/];
 const forbiddenRootPatterns = [/\bTextMotionSplitRenderableRecipeBuilder\b/];

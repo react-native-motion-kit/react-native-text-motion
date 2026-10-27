@@ -159,13 +159,60 @@ Use this for responsive hero titles, section headings, and concise product copy 
 
 `overlayText()` also accepts the built-in style-transform effects (`fade`, `rise`, `slide`, `shake`, `scale`, and `pulse`) because they operate on the rendered line frame. `lineReveal()` is split internally: its opacity is applied to the line frame, while its vertical reveal offset moves only the paragraph copy inside the line mask. This lets combinations such as `lineReveal().and(scale())` and `pulse()` grow from the measured line center without being clipped by the renderer's own line mask.
 
+## Typewriter
+
+Use `typewriter()` for short greetings, onboarding copy, or labels that should appear one character at a time while keeping the completed phrase's space and line breaks in place. It is an effect imported from the package root, with no options; it is not a preset or a separate renderer.
+
+```tsx
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+  useTextMotionControls,
+} from '@react-native-motion-kit/text-motion';
+import { Button } from 'react-native';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  const controls = useTextMotionControls();
+
+  return (
+    <>
+      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
+      <Button title="Replay" onPress={controls.replay} />
+    </>
+  );
+}
+```
+
+`stagger(0.04)` uses seconds, so visible characters start 40ms apart. The first character appears on the first playback update; whitespace and hard newlines keep their layout space without taking a delay slot, and punctuation takes a slot like any other character. Actual display times follow device frames. `duration: 0` makes the default reveal instant for each character in autoplay and controls-driven playback.
+
+Use the existing controls to replay, reset, or stop typing. `stop()` keeps the current state; `play()` afterward does not promise an exact continuation of the remaining typing schedule. To type a different phrase completely from the start, remount it with a new React `key`. Appending text is not a streaming API.
+
+For external playback, pass `progress={progress}` instead of `controls`. `.motion()` is ignored for that instance. **Progress describes the effect timeline, not the percentage of characters shown:** with ten visible characters and `stagger(0.05)`, all characters are shown once progress exceeds about `0.310345`, so `0.5` does not mean five characters. Decreasing progress can hide characters again. Use a linear external timing curve when you want evenly spaced threshold crossings in time.
+
+`typewriter()` can combine with `rise()` or `fade()`. Each character stays hidden until its local progress becomes positive, then the other effects continue normally; adding `fade()` intentionally makes its appearance gradual. The visibility rule works in either composition order. For a visible movement after each character appears, use a nonzero `.motion()` duration.
+
+This effect supports `nativeText()` only. It preserves that renderer's completed token layout; it does not provide exact single-`Text` shaping or line wrapping, a cursor, growing/deleting the underlying string, or streaming. The built-in grapheme fallback now keeps decomposed Hangul syllable sequences such as `한` together without normalizing the source, but it does not implement all Unicode grapheme rules. Complex scripts can still need an app-provided `Intl.Segmenter` or `custom()` splitter. Measure long text and many rows on your target devices before treating them as supported workloads.
+
 ## Stable MVP Scope
 
 - recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
 - splitters: `graphemes`, `words`, `custom`, experimental newline-only `lines`
 - renderers: `nativeText`, `overlayText`
 - timelines: `stagger`, `sequence`, `parallel`, `wave`
-- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`
+- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`, `typewriter`
 - presets subpath: `@react-native-motion-kit/text-motion/presets`
 - explicit playback `controls` for event-driven play/replay/reset/stop
 - controlled progress via external Reanimated shared values
@@ -198,7 +245,7 @@ Skia, rich text, and RN-rendered line-to-token mapping are deferred. Context/pro
 
 `text-motion` stays focused on split text motion: tokenization, layout-aware timing, effects, renderers, split-token playback, accessibility, and presets for titles, labels, onboarding copy, and product copy.
 
-Features that depend on text tokens or text layout can be considered here, including typewriter, scramble, wipe, text-change transitions, future rendered-line extensions such as masks or word-in-line effects, and renderer-specific effects behind explicit capability boundaries.
+Features that depend on text tokens or text layout can be considered here, including scramble, wipe, text-change transitions, future rendered-line extensions such as masks or word-in-line effects, and renderer-specific effects behind explicit capability boundaries.
 
 Features that solve a different problem are likely better served by separate package candidates. Number count-up, odometer, currency, percentage, timer, and delta animations are value-formatting problems rather than split-text layout problems. A separate value-motion package could share Motion Kit conventions without expanding the `text-motion` API surface.
 
@@ -242,6 +289,7 @@ Use this package today when you need:
 
 - entrance motion for short React Native text such as titles, labels, onboarding copy, or product copy
 - word-level or grapheme-level reveal effects powered by Reanimated
+- character-by-character Typewriter reveals that keep the completed phrase's layout
 - reusable motion recipes instead of one-off animation props
 - accessible split text that screen readers read as one phrase
 - event-driven playback controls for replay/reset/stop without remounting
