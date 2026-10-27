@@ -1,0 +1,101 @@
+# Timelines
+
+Timelines assign start delays to visible motion units: source tokens for `nativeText()` and measured lines for `overlayText()`. **All timeline delays are in seconds.** Whitespace and non-animated layout units do not consume motion indices.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  parallel,
+  sequence,
+  stagger,
+  wave,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const Title = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04, { from: 'center' }))
+  .effect(fade())
+  .motion({ kind: 'timing', options: { duration: 300 } })
+  .component();
+```
+
+Here `0.04` means a 40ms delay step. The `300` motion duration is **milliseconds** per animated unit. Without a timeline, every unit has zero delay.
+
+## `stagger(step, options?)`
+
+```ts
+type TextMotionStaggerFrom = 'start' | 'center' | 'end' | 'edges' | number;
+type TextMotionStaggerOptions = { from?: TextMotionStaggerFrom };
+```
+
+`step` is required, finite, and non-negative. `from` defaults to `'start'`. A numeric origin is a finite token index, not a percentage; it may be fractional.
+
+For unit index `i` and total count `n`, the delay is `step × distance`:
+
+| `from` | Distance | Pattern |
+| --- | --- | --- |
+| `'start'` | `i` | First to last |
+| `'end'` | `n - 1 - i` | Last to first |
+| `'center'` | `abs(i - (n - 1) / 2)` | Middle outward |
+| `'edges'` | `min(i, n - 1 - i)` | Both ends inward |
+| A number `k` | `abs(i - k)` | Outward from index `k` |
+
+```tsx
+stagger(0.04);
+stagger(0.04, { from: 'end' });
+stagger(0.04, { from: 'edges' });
+stagger(0.04, { from: 2 });
+```
+
+## `wave(options?)`
+
+```ts
+type TextMotionWaveOptions = {
+  amplitude?: number;
+  wavelength?: number;
+};
+```
+
+| Option | Default | Constraint | Meaning |
+| --- | --- | --- | --- |
+| `amplitude` | `0.08` | Finite, `>= 0` | Maximum delay in seconds |
+| `wavelength` | `4` | Finite, `> 0` | Number of motion units per sine-wave cycle |
+
+The delay for index `i` is `((sin(i / wavelength × 2π) + 1) / 2) × amplitude`. The first unit therefore starts at half the amplitude; a wave does not promise left-to-right reveal order.
+
+```tsx
+wave();
+wave({ amplitude: 0.06, wavelength: 5 });
+```
+
+## `sequence(...timelines)`
+
+Accepts zero or more timeline handles and **adds their delays for each unit**. This composes delay patterns; it does not wait for one whole animation to finish before starting another.
+
+```tsx
+sequence(stagger(0.02), wave({ amplitude: 0.04, wavelength: 4 }));
+```
+
+`sequence()` with no arguments produces zero delay.
+
+## `parallel(...timelines)`
+
+Accepts zero or more timeline handles and chooses the **earliest delay for each unit**.
+
+```tsx
+parallel(stagger(0.08), wave({ amplitude: 0.05, wavelength: 3 }));
+```
+
+`parallel()` with no arguments produces zero delay. It does not create independent playback tracks.
+
+## Controlled progress
+
+In [external progress mode](../guide/usage/playback.md), timeline delays still shape each unit's local progress. The app controls the shared value's timing curve; `.motion()` does not run. A timeline is a delay pattern, not a separate playback controller.
+
+## Handles and validation
+
+The root exports `TextMotionTimeline`, `TextMotionStaggerFrom`, `TextMotionStaggerOptions`, and `TextMotionWaveOptions`. Numeric factory inputs are validated as described above. Returned timelines are opaque handles: `delayFor`, `name`, and `options` are not public properties. Pass timelines to `.timeline(...)`, `sequence(...)`, or `parallel(...)`.

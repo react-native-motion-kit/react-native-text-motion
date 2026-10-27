@@ -1,0 +1,153 @@
+# 예제
+
+아래 예제는 현재 공개 API를 사용합니다. [설치](../getting-started/installation.md)를 마친 React Native 앱에서 실행하세요. 문서 사이트는 코드를 보여 주며 네이티브 예제를 브라우저 안에서 실행하지는 않습니다.
+
+## 프리셋으로 시작하기
+
+프리셋은 `/presets` 경로에서 가져오는 레시피 팩토리입니다. 컴포넌트는 렌더 함수 밖에서 한 번 만드세요.
+
+```tsx
+import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
+
+const HeroTitle = editorialRise().component();
+
+export function Hero() {
+  return (
+    <HeroTitle style={{ fontSize: 32, fontWeight: '700' }}>
+      자연스럽게 느껴지는 텍스트 모션
+    </HeroTitle>
+  );
+}
+```
+
+`softWave()`와 `gentleEmphasis()`는 [프리셋](./presets.md)을 참고하세요.
+
+## 단어 진입 효과와 다시 재생
+
+```tsx
+import { Button, View } from 'react-native';
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  useTextMotionControls,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const WordReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade().and(rise({ y: 10 })))
+  .motion({ kind: 'timing', options: { duration: 360 } })
+  .component();
+
+export function ReplayExample() {
+  const controls = useTextMotionControls();
+
+  return (
+    <View>
+      <WordReveal controls={controls}>단어마다 작은 움직임을 더합니다.</WordReveal>
+      <Button title="다시 재생" onPress={controls.replay} />
+    </View>
+  );
+}
+```
+
+`stagger(0.04)`는 시작 간격을 40ms로 설정하고, `duration: 360`은 토큰별 모션 시간을 밀리초로 설정합니다. controls를 전달해도 마운트 시 자동 재생은 유지됩니다. 외부 진행률과 전체 명령은 [재생 제어](./playback.md)를 참고하세요.
+
+## 실제 렌더링된 줄 표시하기
+
+사용 가능한 너비에 맞춰 제목이 줄바꿈돼야 한다면 네이티브가 렌더링한 줄을 사용하세요. 이 레시피에는 splitter를 추가하지 않습니다.
+
+```tsx
+import { View } from 'react-native';
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  parentLabelPolicy,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const LineTitle = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function RenderedLinesExample() {
+  return (
+    <View style={{ width: 280 }}>
+      <LineTitle style={{ fontSize: 32, lineHeight: 40, fontWeight: '700' }}>
+        레이아웃이 실제로 렌더링한 줄에 맞춰 제목을 움직입니다
+      </LineTitle>
+    </View>
+  );
+}
+```
+
+`overlayText()`는 너비, 글꼴, 글꼴 배율, 글자 조형이 적용된 문단을 측정합니다. `lines()`는 명시적인 줄바꿈 문자만 나눕니다. [렌더러](../../api/renderers.md)를 참고하세요.
+
+## 레이아웃을 유지하는 Typewriter
+
+```tsx
+import { Button, View } from 'react-native';
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+  useTextMotionControls,
+} from '@react-native-motion-kit/text-motion';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  const controls = useTextMotionControls();
+
+  return (
+    <View>
+      <TypewriterText controls={controls}>안녕, 한글! 👩🏽‍💻</TypewriterText>
+      <Button title="다시 재생" onPress={controls.replay} />
+      <Button title="초기화" onPress={controls.reset} />
+      <Button title="정지" onPress={controls.stop} />
+    </View>
+  );
+}
+```
+
+완성된 문장의 공간을 처음부터 확보합니다. 보이는 토큰은 타임라인의 시작 시점에 표시되고, 공백과 명시적 줄바꿈은 지연 슬롯 없이 공간을 유지합니다. `duration: 0`은 토큰별 표시를 즉시 처리합니다. Typewriter는 `nativeText()`가 필요하며 커서, 스트리밍, 단일 `Text`와 정확히 같은 줄바꿈을 제공하지 않습니다.
+
+다른 문장을 처음부터 입력하려면 새 React `key`로 다시 마운트하세요. 문자열을 이어 붙이는 방식은 스트리밍 API가 아닙니다. 효과 조합은 [효과](../../api/effects.md), 문자소 폴백의 한계는 [문자 분할](./segmentation.md)을 참고하세요.
+
+## 저장소 예제 실행
+
+저장소 루트에서 `.nvmrc`와 `package.json`에 고정된 Node·pnpm 버전을 사용하세요.
+
+```sh
+pnpm install
+pnpm example start
+# 또는 네이티브 앱을 빌드하고 실행합니다.
+pnpm example ios
+pnpm example android
+# 브라우저 개발도 가능합니다.
+pnpm example web
+```
+
+네이티브 빌드 명령에는 각 플랫폼의 일반적인 개발 도구가 필요합니다. 브라우저는 화면을 살펴보는 데 유용하지만 iOS·Android의 레이아웃과 성능을 검증한 근거는 아닙니다.
+
+예제는 **Presets**, **Splitters**, **Effects**, **Timelines**, **Layout**, **Playback** 그룹으로 나뉩니다. **Line Reveal**, **Typewriter Controls**, **Controlled Progress**, **Renderer Performance**에서 관련 API를 확인하세요. 측정 기록 방법은 [성능](./performance.md)을 참고하세요.

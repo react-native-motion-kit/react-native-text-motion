@@ -1,0 +1,101 @@
+# 타임라인
+
+타임라인은 보이는 모션 단위별 시작 지연을 정합니다. `nativeText()`에서는 원문 토큰, `overlayText()`에서는 측정된 줄이 단위입니다. **타임라인의 모든 지연은 초 단위**입니다. 공백과 애니메이션하지 않는 배치 단위는 모션 인덱스를 사용하지 않습니다.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  parallel,
+  sequence,
+  stagger,
+  wave,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const Title = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04, { from: 'center' }))
+  .effect(fade())
+  .motion({ kind: 'timing', options: { duration: 300 } })
+  .component();
+```
+
+여기서 `0.04`는 40ms 지연 간격입니다. 모션의 `300`은 애니메이션 단위당 **밀리초** 지속 시간입니다. 타임라인을 생략하면 모든 단위의 지연이 0입니다.
+
+## `stagger(step, options?)`
+
+```ts
+type TextMotionStaggerFrom = 'start' | 'center' | 'end' | 'edges' | number;
+type TextMotionStaggerOptions = { from?: TextMotionStaggerFrom };
+```
+
+`step`은 필수이며, 유한한 0 이상의 값이어야 합니다. `from`의 기본값은 `'start'`입니다. 숫자로 지정한 시작점은 비율이 아닌 유한한 토큰 인덱스이며 소수도 가능합니다.
+
+단위 인덱스가 `i`, 전체 개수가 `n`이면 지연은 `step × 거리`입니다.
+
+| `from` | 거리 | 순서 |
+| --- | --- | --- |
+| `'start'` | `i` | 처음에서 끝으로 |
+| `'end'` | `n - 1 - i` | 끝에서 처음으로 |
+| `'center'` | `abs(i - (n - 1) / 2)` | 가운데에서 바깥으로 |
+| `'edges'` | `min(i, n - 1 - i)` | 양 끝에서 안쪽으로 |
+| 숫자 `k` | `abs(i - k)` | 인덱스 `k`에서 바깥으로 |
+
+```tsx
+stagger(0.04);
+stagger(0.04, { from: 'end' });
+stagger(0.04, { from: 'edges' });
+stagger(0.04, { from: 2 });
+```
+
+## `wave(options?)`
+
+```ts
+type TextMotionWaveOptions = {
+  amplitude?: number;
+  wavelength?: number;
+};
+```
+
+| 옵션 | 기본값 | 제약 | 의미 |
+| --- | --- | --- | --- |
+| `amplitude` | `0.08` | 유한한 값, `>= 0` | 최대 지연 시간(초) |
+| `wavelength` | `4` | 유한한 값, `> 0` | 사인파 한 주기에 포함되는 모션 단위 수 |
+
+인덱스 `i`의 지연은 `((sin(i / wavelength × 2π) + 1) / 2) × amplitude`입니다. 따라서 첫 단위는 amplitude의 절반만큼 늦게 시작하며, wave가 왼쪽부터 오른쪽으로 나타나는 순서를 보장하지는 않습니다.
+
+```tsx
+wave();
+wave({ amplitude: 0.06, wavelength: 5 });
+```
+
+## `sequence(...timelines)`
+
+0개 이상의 타임라인 핸들을 받아 **각 단위의 지연을 더합니다**. 지연 패턴의 합성이며, 하나의 전체 애니메이션이 끝날 때까지 기다린 뒤 다음 애니메이션을 시작하는 API는 아닙니다.
+
+```tsx
+sequence(stagger(0.02), wave({ amplitude: 0.04, wavelength: 4 }));
+```
+
+인자 없는 `sequence()`는 지연 0을 만듭니다.
+
+## `parallel(...timelines)`
+
+0개 이상의 타임라인 핸들을 받아 **각 단위에서 가장 빠른 지연**을 선택합니다.
+
+```tsx
+parallel(stagger(0.08), wave({ amplitude: 0.05, wavelength: 3 }));
+```
+
+인자 없는 `parallel()`은 지연 0을 만듭니다. 독립적인 재생 트랙을 만드는 API는 아닙니다.
+
+## 외부 progress
+
+[외부 progress 모드](../guide/usage/playback.md)에서도 타임라인 지연은 각 단위의 로컬 progress를 정합니다. 공유 값의 시간 곡선은 앱이 제어하고 `.motion()`은 실행하지 않습니다. 타임라인은 지연 패턴이며 별도의 재생 컨트롤러가 아닙니다.
+
+## 핸들과 검증
+
+루트는 `TextMotionTimeline`, `TextMotionStaggerFrom`, `TextMotionStaggerOptions`, `TextMotionWaveOptions`를 내보냅니다. 숫자 팩터리 입력은 위의 제약대로 검사합니다. 반환되는 타임라인은 불투명 핸들이므로 `delayFor`, `name`, `options`는 공개 속성이 아닙니다. `.timeline(...)`, `sequence(...)`, `parallel(...)`에 전달하세요.

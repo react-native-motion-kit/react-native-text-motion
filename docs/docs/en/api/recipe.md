@@ -1,0 +1,86 @@
+# Recipe API
+
+Import the public factories from `@react-native-motion-kit/text-motion`. Presets are exported separately from `@react-native-motion-kit/text-motion/presets`.
+
+## `defineTextMotion()`
+
+Starts a recipe builder. Every configuration method returns a new builder, so a base recipe can be reused without changing earlier recipes.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const base = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04));
+
+const FadeTitle = base.effect(fade()).component();
+const RisingTitle = base.effect(fade().and(rise({ y: 12 }))).component();
+
+export function Heading() {
+  return <RisingTitle>Motion made for text</RisingTitle>;
+}
+```
+
+Create recipe components outside the rendering function so ordinary rerenders preserve their React identity.
+
+## Builder methods
+
+| Method | Input | Behavior |
+| --- | --- | --- |
+| `.split(splitter)` | A [splitter](./splitters.md) | Chooses source tokens. Omit this for `overlayText()`. |
+| `.layout(renderer)` | A [renderer](./renderers.md) | Selects how text is laid out and rendered. Required before `.component()`. |
+| `.timeline(timeline)` | A [timeline](./timelines.md) | Chooses each visible motion unit's start delay. |
+| `.effect(effect)` | A compatible [effect](./effects.md) | Appends an effect; repeated calls accumulate effects. |
+| `.motion(config)` | `TextMotionMotionConfig` | Configures autoplay and controls-driven playback. |
+| `.accessibility(policy)` | `TextMotionAccessibilityPolicy` | Configures parent labeling and reduced motion. |
+| `.recipe()` | None | Returns a configuration snapshot; allowed before a renderer is chosen. |
+| `.component()` | None | Creates a React component accepting [text-motion props](./component-props.md). |
+
+Repeated `.split()`, `.layout()`, `.timeline()`, `.motion()`, and `.accessibility()` calls replace that part of the new recipe. Select the renderer before adding effects so TypeScript can check its capabilities. A rendered-line recipe cannot use `.split(...)`; that combination is also rejected at runtime.
+
+With `nativeText()` and no splitter, the whole string is one token. With no timeline, all animated units start together. With no effects, their visual style stays unchanged.
+
+## `.motion(config)`
+
+```tsx
+.motion({ kind: 'timing', options: { duration: 420 } })
+.motion({ kind: 'spring', options: { damping: 14, stiffness: 160 } })
+```
+
+`TextMotionMotionConfig` is a discriminated union:
+
+```ts
+type TextMotionMotionConfig =
+  | { kind: 'timing'; options?: TextMotionTimingOptions }
+  | { kind: 'spring'; options?: TextMotionSpringOptions };
+```
+
+`TextMotionTimingOptions` follows Reanimated's `WithTimingConfig` and `TextMotionSpringOptions` follows `WithSpringConfig`, with `reduceMotion` excluded from both. Configure reduced motion through `.accessibility(...)`. The installed Reanimated version determines the remaining supported options. Numeric motion options must be finite.
+
+The default internal animation is timing with a **300ms** duration. Timeline inputs use **seconds**; `duration` uses **milliseconds**. Function-valued options such as `easing` are compared by reference: reuse the same function when a rerender should preserve playback.
+
+Passing a component an external `progress` shared value disables internal autoplay and ignores `.motion()` for that instance. See [Playback](../guide/usage/playback.md).
+
+## `.accessibility(parentLabelPolicy(options))`
+
+```tsx
+import { parentLabelPolicy } from '@react-native-motion-kit/text-motion';
+
+const policy = parentLabelPolicy({ reducedMotion: 'final-state' });
+```
+
+`ParentLabelPolicyOptions` has one option, `reducedMotion?: 'system' | 'final-state'`, defaulting to `'system'`. The returned policy exposes one full-text accessible parent label and hides decorative token nodes. Both renderers use `parentLabelPolicy()` when no policy is supplied. See [Accessibility](../guide/usage/accessibility.md) for renderer behavior and recommended usage.
+
+## Public handles and types
+
+`TextMotionSplitter`, `TextMotionRenderer`, `TextMotionTimeline`, and `TextMotionEffect` are opaque handles returned by the public factories. Pass them to the builder; use `.and(...)` to compose effects. Their internal `kind`, `name`, `options`, `delayFor`, `Component`, and capability arrays are not a supported inspection or extension API.
+
+The root also exports `TextMotionRendererCapability`, `TextMotionRendererProps`, and `TextMotionToken` as types. Exported types do not make internal factory functions public. Custom effect factories, custom renderer factories, descriptor readers, and capability factories are outside the current root API.

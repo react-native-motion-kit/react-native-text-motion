@@ -1,0 +1,109 @@
+# 분할기
+
+분할기는 `nativeText()`가 사용할 원문 토큰을 정합니다. 반환되는 불투명 `TextMotionSplitter` 핸들을 `.split(...)`에 전달합니다.
+
+```tsx
+import {
+  custom,
+  defineTextMotion,
+  fade,
+  graphemes,
+  lines,
+  nativeText,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const WordTitle = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade())
+  .component();
+```
+
+`overlayText()`는 실제 렌더링된 줄을 직접 측정하므로 어떤 분할기와도 조합할 수 없습니다. [렌더러](./renderers.md)를 참고하세요.
+
+## `words()`
+
+옵션을 받지 않습니다. `Intl.Segmenter`가 있으면 이를 사용하고, 없으면 내부 대체 구현으로 단어·공백·문장 부호 토큰을 만듭니다. 공백은 배치를 유지하지만 모션 인덱스를 사용하지 않으며, 보이는 문장 부호는 모션 인덱스를 사용할 수 있습니다.
+
+단어 경계는 실행 환경의 분할 규칙을 따릅니다. 모든 언어에서 공백이 단어를 구분한다고 보장하지 않습니다. 생성된 토큰의 메타데이터에는 `isWordLike`가 포함됩니다.
+
+## `graphemes()`
+
+옵션을 받지 않습니다. 문자 단위 모션을 위한 그래핌 기반 토큰을 만듭니다. 서로게이트 쌍과 결합 문자를 자를 수 있는 `text.split('')` 대신 사용하세요.
+
+대체 구현은 일반적인 이모지 시퀀스와 `한` 같은 분해형 한글을 원문 정규화 없이 처리하지만, 모든 유니코드 그래핌 규칙을 구현하지는 않습니다. 일부 복잡한 문자 결합은 나뉠 수 있습니다. 정확한 언어별 경계가 필요하면 [텍스트 분할](../guide/usage/segmentation.md)을 확인하세요.
+
+## `lines()` — 실험적
+
+옵션을 받지 않습니다. 명시적인 `\n` 경계에서 나누며, 토큰의 원문 범위에 줄바꿈 문자를 보존합니다. 너비·글꼴·글자 크기 배율로 생긴 자동 줄바꿈은 **측정하지 않습니다**.
+
+```tsx
+const AuthoredLines = defineTextMotion()
+  .split(lines())
+  .layout(nativeText())
+  .effect(fade())
+  .component();
+
+export function Heading() {
+  return <AuthoredLines>{'첫 번째 줄\n두 번째 줄'}</AuthoredLines>;
+}
+```
+
+토큰에는 `metadata: { experimental: true, mapping: 'newline-only' }`가 들어갑니다. React Native가 실제로 렌더링한 줄이 필요하면 `overlayText()`와 `lineReveal()`을 사용하세요.
+
+## `custom(split)`
+
+```ts
+type TextMotionCustomSplit = (
+  input: string,
+  context?: { locale?: string | string[] },
+) => readonly TextMotionCustomSplitResult[];
+
+type TextMotionCustomSplitResult = string | TextMotionCustomSplitToken;
+
+type TextMotionCustomSplitToken = {
+  text: string;
+  sourceRange?: { start: number; end: number };
+  metadata?: Record<string, unknown>;
+};
+```
+
+문자열 또는 토큰 객체를 반환합니다. 문자열의 원문 범위는 이전 토큰의 끝부터 앞으로 검색해 추론합니다. 대응 관계가 모호하거나 메타데이터가 필요하면 범위를 직접 지정하세요. 범위는 JavaScript 문자열 인덱스(UTF-16 코드 단위)를 사용하며, `end` 위치는 포함하지 않습니다.
+
+```tsx
+const phrases = custom((input) => {
+  const separator = input.indexOf(' / ');
+  if (separator < 0) return [input];
+
+  return [
+    { text: input.slice(0, separator), sourceRange: { start: 0, end: separator } },
+    { text: ' / ', sourceRange: { start: separator, end: separator + 3 } },
+    {
+      text: input.slice(separator + 3),
+      sourceRange: { start: separator + 3, end: input.length },
+    },
+  ];
+});
+```
+
+화면에 남겨야 할 문자와 공백을 모두 보존하세요. 사용자 정의 분할기는 제품별 분할 결정을 자동으로 보정하거나 검증하지 않습니다. 선택적인 context는 콜백 타입의 일부입니다. 현재 레시피 컴포넌트는 locale 없이 분할기를 호출하며, 컴포넌트에 `locale` prop은 없습니다.
+
+## 토큰 타입
+
+타입이 필요한 연동을 위해 `TextMotionToken`을 공개합니다.
+
+```ts
+type TextMotionToken = {
+  id: string;
+  text: string;
+  index: number;
+  unit: 'grapheme' | 'word' | 'line' | 'custom';
+  sourceRange: { start: number; end: number };
+  metadata?: Record<string, unknown>;
+};
+```
+
+분할기 핸들은 공개 `.split()` 메서드나 내부 descriptor를 노출하지 않습니다. 핸들을 레시피 빌더에 전달하세요.

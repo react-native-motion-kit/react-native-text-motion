@@ -1,0 +1,22 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rspress build",
+    "check": "node scripts/check-docs.mjs",
+    "dev": "rspress dev",
+    "preview": "rspress preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rspress/core": "2.0.21",
+    "@shikijs/transformers": "4.4.3",
+    "@types/node": "^24.13.4",
+    "@types/react": "^19.2.0",
+    "react": "catalog:",
+    "react-dom": "19.2.3",
+    "typescript": "catalog:"
+  }
+}

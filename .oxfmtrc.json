@@ -1,6 +1,15 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["lib", "node_modules", "ios", "android", "dist", "**/*.md"],
+  "ignorePatterns": [
+    "lib",
+    "node_modules",
+    "ios",
+    "android",
+    "dist",
+    "doc_build",
+    ".rspress",
+    "**/*.md"
+  ],
   "sortImports": {
     "groups": [
       "type-import",

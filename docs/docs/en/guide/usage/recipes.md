@@ -1,0 +1,102 @@
+# Recipes
+
+`defineTextMotion()` starts an immutable builder. Each chain method returns a new builder, so you can share a base recipe and create variations without changing the base.
+
+## Build a component
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const base = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade());
+
+const SoftTitle = base
+  .motion({ kind: 'timing', options: { duration: 360 } })
+  .component();
+
+const RisingTitle = base
+  .effect(rise({ y: 12 }))
+  .motion({ kind: 'spring', options: { damping: 16, stiffness: 140 } })
+  .component();
+
+export function Titles() {
+  return (
+    <>
+      <SoftTitle>A soft entrance</SoftTitle>
+      <RisingTitle>A little more movement</RisingTitle>
+    </>
+  );
+}
+```
+
+Define generated components at module scope. Calling `.component()` during render creates a new component type and can cause remounts and unintended autoplay.
+
+## What each stage controls
+
+| Stage | Responsibility |
+| --- | --- |
+| `.split(...)` | Source token boundaries for `nativeText()` |
+| `.layout(...)` | Renderer and its supported motion units/effects |
+| `.timeline(...)` | Per-token start delays, in seconds |
+| `.effect(...)` | Add an effect; repeated calls accumulate effects |
+| `.motion(...)` | Internal autoplay and controls-driven timing or spring playback |
+| `.accessibility(...)` | Parent label, decorative tokens, and reduced-motion policy |
+| `.component()` | Produce a React component that accepts a string child |
+| `.recipe()` | Read a recipe configuration snapshot without creating a component |
+
+Calling `.split()`, `.layout()`, `.timeline()`, `.motion()`, or `.accessibility()` again replaces that setting on the new builder. `.effect()` adds to the existing effects instead. `.recipe()` can be used before layout; treat its returned configuration as a snapshot rather than mutating it to update a component.
+
+## Choose a renderer first
+
+TypeScript exposes `.component()` only after `.layout(...)` selects a renderer. Choose the renderer before `.effect(...)` so its capability constraints guide effect selection.
+
+With `nativeText()`, an explicit splitter chooses words, graphemes, custom tokens, or authored newline units. Without a splitter, the entire input is one source token. The default is not word splitting.
+
+With `overlayText()`, the renderer derives units from measured native lines. Do not add `.split(...)`, even if you want to animate lines. The type system prevents the incompatible chain and runtime checks also reject it.
+
+## Compose compatible effects
+
+Both `.effect(fade().and(rise()))` and `.effect(fade()).effect(rise())` add fade and rise behavior. Built-in `fade`, `rise`, `slide`, `scale`, `pulse`, and `shake` work with both renderers. `typewriter()` requires `nativeText()`; `lineReveal()` requires `overlayText()`.
+
+Splitters, timelines, effects, and renderers are opaque public handles. Pass them to the builder rather than accessing internal descriptors. The root API does not export custom effect factories or a renderer-extension SDK.
+
+## Configure playback
+
+```tsx
+import { defineTextMotion, fade, nativeText } from '@react-native-motion-kit/text-motion';
+
+const TimedText = defineTextMotion()
+  .layout(nativeText())
+  .effect(fade())
+  .motion({ kind: 'timing', options: { duration: 400 } })
+  .component();
+
+const SpringText = defineTextMotion()
+  .layout(nativeText())
+  .effect(fade())
+  .motion({ kind: 'spring', options: { damping: 16, stiffness: 140 } })
+  .component();
+
+export function Message() {
+  return (
+    <>
+      <TimedText>The whole phrase fades together</TimedText>
+      <SpringText>The same unit follows a spring</SpringText>
+    </>
+  );
+}
+```
+
+Motion options follow the relevant Reanimated timing or spring configuration, except `reduceMotion`, which belongs to the accessibility policy. Timeline delays use seconds; timing `duration` uses milliseconds. Function-valued options such as easing are compared by reference: reuse the same function when rerenders should preserve playback.
+
+Passing `progress` to an instance gives the app ownership of playback and bypasses `.motion()` for that instance. Use `controls` for discrete commands while retaining recipe-owned playback. See [playback](./playback.md) and the [recipe API](../../api/recipe.md).

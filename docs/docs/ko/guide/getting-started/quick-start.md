@@ -1,0 +1,86 @@
+# 빠른 시작
+
+[설치](./installation.md)를 마친 뒤 프리셋을 선택하거나 레시피를 만드세요. 두 방식 모두 재사용할 수 있는 React 컴포넌트를 반환합니다.
+
+## 프리셋으로 시작하기
+
+```tsx
+import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
+
+const HeroReveal = editorialRise().component();
+
+export function HeroTitle() {
+  return (
+    <HeroReveal style={{ fontSize: 32, fontWeight: '700' }}>
+      자연스럽게 움직이는 텍스트
+    </HeroReveal>
+  );
+}
+```
+
+`editorialRise()`는 단어 토큰, 중앙에서 시작하는 stagger, rise·fade·scale 조합을 사용합니다. 컴포넌트가 마운트되면 자동으로 재생합니다.
+
+## 단어 등장 효과 만들기
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  parentLabelPolicy,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const WordReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade().and(rise({ y: 12 })))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Headline() {
+  return <WordReveal style={{ fontSize: 28 }}>단어마다 움직임을 더하세요</WordReveal>;
+}
+```
+
+타임라인의 단위는 **초**입니다. `stagger(0.04)`는 보이는 단어를 40ms 간격으로 시작합니다. motion의 `duration` 단위는 **밀리초**입니다. 각 토큰은 자신의 지연 시간이 지난 뒤 420ms 동안 움직입니다. 공백은 레이아웃 공간을 유지하지만 지연 순번을 차지하지 않습니다. 위 접근성 정책은 전체 문장을 한 번 읽도록 제공하고, 동작 줄이기가 활성화되면 최종 상태를 보여 줍니다.
+
+## 실제 렌더링된 줄 드러내기
+
+폭과 글꼴 설정에 따라 애니메이션할 줄을 결정하려면 `overlayText()`를 사용하세요. 이 렌더러가 줄 측정을 담당하므로 `.split(...)`은 생략합니다.
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const LineTitle = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function ResponsiveTitle() {
+  return (
+    <LineTitle style={{ fontSize: 32, lineHeight: 40, maxWidth: 320 }}>
+      레이아웃이 만든 줄을 따라 움직여요
+    </LineTitle>
+  );
+}
+```
+
+`lines()`는 다른 용도입니다. 명시적인 줄바꿈 문자만 분할하며 자동 줄바꿈을 측정하지 않습니다.
+
+## 다음 단계
+
+- [레시피](../usage/recipes.md) 조합 방식과 [프리셋](../usage/presets.md) 수정 방법을 알아보세요.
+- [재생 제어 또는 외부 progress](../usage/playback.md)를 연결하세요.
+- [렌더러](../../api/renderers.md), [효과](../../api/effects.md), [컴포넌트 props](../../api/component-props.md)를 비교하세요.
