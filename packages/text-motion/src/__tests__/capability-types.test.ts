@@ -10,6 +10,7 @@ import {
   parentLabelPolicy,
   scale,
   stagger,
+  typewriter,
   useTextMotionControls,
   wave,
   words,
@@ -79,6 +80,22 @@ function expectNativeTextRejectsSkiaOnlyEffects() {
 }
 
 void expectNativeTextRejectsSkiaOnlyEffects;
+
+function expectTypewriterRequiresSourceTokens() {
+  defineTextMotion().split(graphemes()).layout(nativeText()).effect(typewriter()).component();
+  defineTextMotion().layout(nativeText()).effect(fade().and(typewriter())).component();
+
+  // @ts-expect-error rendered-line geometry cannot reveal individual source tokens.
+  defineTextMotion().layout(overlayText()).effect(typewriter());
+
+  // @ts-expect-error composed effects keep the native-text requirement.
+  defineTextMotion().layout(overlayText()).effect(typewriter().and(fade()));
+
+  // @ts-expect-error Typewriter timing belongs to .timeline(...) and .motion(...).
+  typewriter({ speed: 40 });
+}
+
+void expectTypewriterRequiresSourceTokens;
 
 function expectComponentRequiresLayout() {
   defineTextMotion().recipe();

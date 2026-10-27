@@ -7,6 +7,7 @@ import {
   shake,
   slide,
   stagger,
+  typewriter,
 } from '@react-native-motion-kit/text-motion';
 
 import { createTextMotionEffect } from '../effects/compose';
@@ -23,6 +24,27 @@ import {
 } from '../renderers/rendererMotion';
 
 describe('rendererMotion', () => {
+  it('preserves one start gate across effect ordering, nesting, and duplicate Typewriter effects', () => {
+    const composed = fade({ from: 0.2, to: 0.9 }).and(rise({ y: 6 }));
+    const style = createTextMotionStyleTransformStatePair([composed]);
+
+    [
+      [typewriter().and(composed)],
+      [composed.and(typewriter())],
+      [typewriter(), composed, typewriter()],
+    ].forEach((effects) => {
+      const state = createTextMotionStyleTransformStatePair(effects);
+
+      expect(state).toEqual({ ...style, revealOnStart: true });
+      expect(createTextMotionItemMotion({ effects }, state, 0.04)).toMatchObject({
+        delayMs: 40,
+        initial: style.initial,
+        revealOnStart: true,
+        target: style.target,
+      });
+    });
+  });
+
   it('resolves composed built-in effect style states', () => {
     expect(
       createTextMotionStyleTransformStatePair([

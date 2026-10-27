@@ -168,4 +168,18 @@ describe('nativeTextPlayback', () => {
     expect(areNativeTextPlaybackRunsEqual(base, sameReference)).toBe(true);
     expect(areNativeTextPlaybackRunsEqual(base, differentReference)).toBe(false);
   });
+
+  it('restarts when the reveal gate changes without changing opacity or timing', () => {
+    const base = createPlaybackRun();
+    const typing = createPlaybackRun({ tokenMotion: createTokenMotion({ revealOnStart: true }) });
+
+    expect(areNativeTextPlaybackRunsEqual(base, typing)).toBe(false);
+    expect(areNativeTextPlaybackRunsEqual(typing, base)).toBe(false);
+    expect(
+      areNativeTextPlaybackRunsEqual(
+        typing,
+        createPlaybackRun({ tokenMotion: createTokenMotion({ revealOnStart: true }) }),
+      ),
+    ).toBe(true);
+  });
 });

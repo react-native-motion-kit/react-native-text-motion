@@ -194,6 +194,7 @@ export function areNativeTextPlaybackRunsEqual(
     Object.is(left.delayMs, right.delayMs) &&
     Object.is(left.pulseScale, right.pulseScale) &&
     left.reducedMotion === right.reducedMotion &&
+    left.revealOnStart === right.revealOnStart &&
     left.renderFinalState === right.renderFinalState &&
     left.text === right.text &&
     areNativeTextStyleStatesEqual(left.initial, right.initial) &&

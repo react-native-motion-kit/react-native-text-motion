@@ -7,6 +7,7 @@ import {
   scale,
   shake,
   slide,
+  typewriter,
 } from '@react-native-motion-kit/text-motion';
 
 import { readTextMotionEffectDescriptor } from '../recipe/descriptors';
@@ -76,6 +77,20 @@ describe('effects', () => {
     );
   });
 
+  it('exposes Typewriter as an opaque native-text effect without timing options', () => {
+    expect(readTextMotionEffectDescriptor(typewriter())).toEqual({
+      kind: 'effect',
+      name: 'typewriter',
+      options: {},
+      requiredCapabilities: ['native-text'],
+    });
+    expect(Object.keys(typewriter())).toEqual(['and']);
+    expect(readTextMotionEffectDescriptor(typewriter().and(fade())).requiredCapabilities).toEqual([
+      'native-text',
+      'style-transform',
+    ]);
+  });
+
   it('keeps descriptor fields off the public runtime object', () => {
     expect(Object.keys(fade())).toEqual(['and']);
   });
@@ -88,7 +103,7 @@ describe('effects', () => {
 
   it('does not expose deferred stable APIs', () => {
     expect('lineReveal' in textMotion).toBe(true);
-    expect('typewriter' in textMotion).toBe(false);
+    expect('typewriter' in textMotion).toBe(true);
     expect('scramble' in textMotion).toBe(false);
     expect('wipe' in textMotion).toBe(false);
     expect('useTextMotionController' in textMotion).toBe(false);

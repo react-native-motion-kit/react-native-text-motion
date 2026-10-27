@@ -31,6 +31,7 @@ export type TextMotionStyleTransformState = {
 export type TextMotionStyleTransformStatePair = {
   initial: TextMotionStyleTransformState;
   pulseScale: number;
+  revealOnStart?: true;
   target: TextMotionStyleTransformState;
 };
 
@@ -46,6 +47,7 @@ export type TextMotionItemMotion = {
   motion?: TextMotionMotionConfig;
   pulseScale: number;
   reducedMotion: 'final-state' | 'system';
+  revealOnStart?: true;
 };
 
 export type TextMotionControlledProgressPlan = {
@@ -65,6 +67,7 @@ type TextMotionStyleStateTransform = (
 type EffectStyleStateChange = {
   initial?: TextMotionStyleStateTransform;
   pulseScale?: TextMotionNumberTransform;
+  revealOnStart?: true;
   target?: TextMotionStyleStateTransform;
 };
 
@@ -87,6 +90,9 @@ const preserveStyleState: TextMotionStyleStateTransform = (state) => state;
 const preserveNumber: TextMotionNumberTransform = (value) => value;
 
 const effectStyleStateResolvers: Record<string, EffectStyleStateResolver> = {
+  typewriter() {
+    return { revealOnStart: true };
+  },
   fade(effect) {
     return {
       initial: setStyleNumber('opacity', numberOption(effect.options, 'from', 0)),
@@ -289,6 +295,8 @@ function applyResolvedEffectStyleStateChange(
   const target = effectStyleStateChange.target ?? preserveStyleState;
 
   return {
+    ...styleState,
+    ...(effectStyleStateChange.revealOnStart ? { revealOnStart: true } : {}),
     initial: initial(styleState.initial),
     pulseScale: pulseScale(styleState.pulseScale),
     target: target(styleState.target),
@@ -359,12 +367,10 @@ export function createTextMotionItemMotion(
   delaySeconds: number,
 ): TextMotionItemMotion {
   return {
+    ...styleState,
     delayMs: createDelayMs(delaySeconds),
-    initial: styleState.initial,
     motion: recipe.motion,
-    pulseScale: styleState.pulseScale,
     reducedMotion: recipe.accessibility?.reducedMotion ?? 'system',
-    target: styleState.target,
   };
 }
 
