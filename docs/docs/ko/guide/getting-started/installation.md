@@ -66,4 +66,4 @@ import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
 
 기본 구성 요소는 패키지 루트에서 가져옵니다. 세 가지 프리셋은 `/presets`에서 가져옵니다. 내부 렌더러나 descriptor 파일을 직접 가져오지 마세요.
 
-[빠른 시작](./quick-start.md)으로 이어서 진행하세요.
+[빠른 시작](./quick-start.mdx)으로 이어서 진행하세요.

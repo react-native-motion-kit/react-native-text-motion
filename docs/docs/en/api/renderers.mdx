@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
 # Renderers
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 Choose a renderer with `.layout(...)` before calling `.component()`. Both factories return opaque handles, not React components.
 
@@ -8,6 +12,8 @@ Choose a renderer with `.layout(...)` before calling `.component()`. Both factor
 | `overlayText()` | Actual React Native rendered line | Not allowed | `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal` |
 
 ## `nativeText(options?)`
+
+<MotionDemo id="words" />
 
 ```ts
 type NativeTextRendererOptions = {
@@ -44,6 +50,8 @@ export function Heading() {
 This renderer uses a wrapping token layout, so exact single-`Text` shaping, kerning, ligatures, and automatic line wrapping are not guaranteed. `textAlign` maps to token-row alignment; it does not turn the renderer into a full native paragraph implementation. Use `overlayText()` for actual rendered-line motion, and ordinary React Native `Text` for rich inline content or exact text-node behavior.
 
 ## `overlayText(options?)`
+
+<MotionDemo id="line-reveal" />
 
 ```ts
 type OverlayTextRendererOptions = {
@@ -89,7 +97,7 @@ This is rendered-line motion, not word-in-line or character-in-line mapping. It 
 
 ## Shared playback and accessibility
 
-Both renderers support autoplay, explicit [controls](../guide/usage/playback.md), and app-owned `progress`. Never pass both `controls` and `progress`. The default accessibility policy exposes the complete phrase once and hides decorative nodes; a component-level `accessibilityLabel` overrides the spoken label.
+Both renderers support autoplay, explicit [controls](../guide/usage/playback.mdx), and app-owned `progress`. Never pass both `controls` and `progress`. The default accessibility policy exposes the complete phrase once and hides decorative nodes; a component-level `accessibilityLabel` overrides the spoken label.
 
 Read [Component Props](./component-props.md), [Accessibility](../guide/usage/accessibility.md), and [Performance](../guide/usage/performance.md) before using many tokens or rows. Browser rendering is not evidence of iOS/Android layout or performance.
 

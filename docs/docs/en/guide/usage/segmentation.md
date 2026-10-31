@@ -11,9 +11,9 @@ Choose token boundaries before choosing their motion. A JavaScript code unit is 
 | `lines()` | Explicit newline-separated source units | Experimental hard-newline motion; it does not detect wrapping. |
 | `custom(fn)` | App-defined strings or token objects | Product-specific boundaries or a different segmentation implementation. |
 
-Whitespace keeps its layout space without consuming an animation delay slot. Punctuation can be a visible animated unit. See [Splitters](../../api/splitters.md) for signatures and token metadata.
+Whitespace keeps its layout space without consuming an animation delay slot. Punctuation can be a visible animated unit. See [Splitters](../../api/splitters.mdx) for signatures and token metadata.
 
-For automatic wrapping based on width and fonts, use `overlayText()` without `.split(...)`. See [Renderers](../../api/renderers.md).
+For automatic wrapping based on width and fonts, use `overlayText()` without `.split(...)`. See [Renderers](../../api/renderers.mdx).
 
 ## `Intl.Segmenter` and fallback behavior
 

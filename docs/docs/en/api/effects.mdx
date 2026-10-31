@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
 # Effects
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 Effects describe the visual change of each motion unit. Import them from `@react-native-motion-kit/text-motion` and pass a compatible effect to `.effect(...)` after selecting a renderer.
 
@@ -21,7 +25,37 @@ Every option is optional; `typewriter()` takes no options. All numeric effect in
 
 The root exports `FadeOptions`, `RiseOptions`, `SlideOptions`, `ScaleOptions`, `PulseOptions`, `ShakeOptions`, and `LineRevealOptions`. Their properties match the table above.
 
+## Try each effect
+
+Replay each demo to compare its starting position, opacity, and scale.
+
+### `fade()`
+
+<MotionDemo id="fade" />
+
+### `rise()`
+
+<MotionDemo id="rise" />
+
+### `slide()`
+
+<MotionDemo id="slide" />
+
+### `scale()`
+
+<MotionDemo id="scale" />
+
+### `pulse()`
+
+<MotionDemo id="pulse" />
+
+### `shake()`
+
+<MotionDemo id="shake" />
+
 ## Compose with `.and(...)`
+
+<MotionDemo id="compose" />
 
 ```tsx
 import {
@@ -52,6 +86,8 @@ Effects require compatible renderer capabilities. `lineReveal()` cannot be used 
 
 ## `lineReveal()`
 
+<MotionDemo id="line-reveal" />
+
 ```tsx
 import {
   defineTextMotion,
@@ -68,9 +104,11 @@ const HeroLines = defineTextMotion()
   .component();
 ```
 
-Do not add a splitter. The renderer measures actual wrapped lines. The reveal offset moves the paragraph copy inside each mask, while opacity applies to the line frame. Composed `scale()` and `pulse()` transform the measured line frame. See [Renderers](./renderers.md) for layout and measurement behavior.
+Do not add a splitter. The renderer measures actual wrapped lines. The reveal offset moves the paragraph copy inside each mask, while opacity applies to the line frame. Composed `scale()` and `pulse()` transform the measured line frame. See [Renderers](./renderers.mdx) for layout and measurement behavior.
 
 ## `typewriter()`
+
+<MotionDemo id="typewriter" />
 
 Use this for fixed-layout character reveals. The splitter chooses the reveal unit, the timeline chooses its start, and `.motion()` chooses any subsequent movement.
 
@@ -102,7 +140,7 @@ The completed phrase's space and line breaks remain in place from the start. Vis
 
 `duration: 0` makes each reveal instant in autoplay or controls mode. To move a character after it appears, use a nonzero duration and compose an effect such as `typewriter().and(rise({ y: 6 }))`. Composing `fade()` intentionally makes appearance gradual. The visibility gate works in either composition order; adding `typewriter()` twice does not add another clock.
 
-Use [controls](../guide/usage/playback.md) for replay/reset/stop. `stop()` preserves the current state; a later `play()` does not promise exact continuation of the remaining typing schedule. To type a new phrase fully from its start, remount with a new React `key`. Appending text is not a streaming API.
+Use [controls](../guide/usage/playback.mdx) for replay/reset/stop. `stop()` preserves the current state; a later `play()` does not promise exact continuation of the remaining typing schedule. To type a new phrase fully from its start, remount with a new React `key`. Appending text is not a streaming API.
 
 With external `progress`, `0` hides the animated characters and `1` shows the final state. **Progress is timeline progress, not the percentage of characters shown.** For maximum delay `D` and a character's delay `d`, local progress is `clamp(progress × (D + 1) - d, 0, 1)`. A character becomes visible when this is greater than zero. Decreasing progress past its start hides it again. `.motion()` is ignored in external-progress mode.
 

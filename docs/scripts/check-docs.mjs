@@ -5,6 +5,22 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../docs/', import.meta.url));
 const locales = ['en', 'ko'];
+const demos = JSON.parse(readFileSync(new URL('../demos.json', import.meta.url), 'utf8'));
+const demoSources = JSON.parse(
+  readFileSync(new URL('../.cache/demo-sources.json', import.meta.url), 'utf8'),
+);
+const demoCounts = { en: {}, ko: {} };
+
+assert.deepEqual(
+  Object.keys(demoSources.recipes).toSorted(),
+  Object.keys(demos).toSorted(),
+  'Every demo must have matching source code.',
+);
+assert.equal(
+  demoSources.player,
+  readFileSync(new URL('../../example/src/DocsDemo.tsx', import.meta.url), 'utf8'),
+  'Player source must match the actual preview app.',
+);
 
 function filesIn(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -46,6 +62,7 @@ function checkLink(file, value) {
   resolved = resolved.replace(/\.html$/, '.md');
   const candidates = [
     resolved,
+    resolved.replace(/\.md$/, '.mdx'),
     `${resolved}.md`,
     `${resolved}.mdx`,
     path.join(resolved, 'index.md'),
@@ -66,6 +83,17 @@ for (const locale of locales) {
   for (const file of filesIn(path.join(root, locale))) {
     if (/\.mdx?$/.test(file)) {
       const content = readFileSync(file, 'utf8').replace(/^```[^\n]*\n[\s\S]*?^```/gm, '');
+      for (const match of content.matchAll(/<MotionDemo\s+id="([^"]+)"\s*\/>/g)) {
+        assert(Object.hasOwn(demos, match[1]), `Unknown demo in ${file}: ${match[1]}`);
+        demoCounts[locale][match[1]] = (demoCounts[locale][match[1]] ?? 0) + 1;
+      }
+      for (const match of content.matchAll(/^import .* from ['"]([^'"]+)['"]/gm)) {
+        const component = path.resolve(path.dirname(file), match[1]);
+        assert(
+          existsSync(component) || existsSync(`${component}.tsx`),
+          `Missing MDX import in ${file}: ${match[1]}`,
+        );
+      }
       for (const match of content.matchAll(/\]\(([^\s)]+)(?:\s+"[^"]*")?\)/g)) {
         checkLink(file, match[1]);
       }
@@ -95,6 +123,22 @@ for (const locale of locales) {
   }
 }
 
+assert.deepEqual(demoCounts.en, demoCounts.ko, 'Demo placement must match between languages.');
+for (const id of Object.keys(demos)) {
+  assert(demoCounts.en[id] > 0, `Missing demonstration: ${id}`);
+}
+for (const asset of [
+  'line-reveal.mp4',
+  'line-reveal.jpg',
+  'line-reveal-light.mp4',
+  'line-reveal-light.jpg',
+  'line-reveal.en.vtt',
+  'line-reveal.ko.vtt',
+]) {
+  const file = path.join(root, 'public/media', asset);
+  assert(existsSync(file) && statSync(file).size > 0, `Missing native demo asset: ${asset}`);
+}
+
 const exportsFile = fileURLToPath(
   new URL('../../packages/text-motion/src/index.tsx', import.meta.url),
 );
@@ -120,5 +164,5 @@ for (const locale of locales) {
 }
 
 process.stdout.write(
-  `Checked ${pageNames('en').length} pages per language: parity, local links, navigation, and public API coverage.\n`,
+  `Checked ${pageNames('en').length} pages per language: parity, local links, navigation, public API coverage, and ${Object.keys(demos).length} demos.\n`,
 );

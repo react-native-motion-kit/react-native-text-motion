@@ -10,7 +10,7 @@ This documentation describes the current `0.1.0` public API.
 
 ## Choose your starting point
 
-Use a [preset](../usage/presets.md) for common title, label, and product-copy animation. Use a [custom recipe](../usage/recipes.md) when you need to choose the motion unit, timing, or effects.
+Use a [preset](../usage/presets.mdx) for common title, label, and product-copy animation. Use a [custom recipe](../usage/recipes.mdx) when you need to choose the motion unit, timing, or effects.
 
 ```tsx
 import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
@@ -45,4 +45,4 @@ The intended workloads are short titles, headings, labels, onboarding copy, and 
 
 The current public API does not include custom effect factories, a renderer-extension SDK, Skia effects, `pause`/`seek`/`reverse`, or built-in scroll, gesture, screen-focus, and in-view drivers. Apps can connect their own events through `controls` and continuous shared values through `progress`. Text changes are enter-only; the library does not retain old text for exit animation or provide a streaming-text API.
 
-Continue with [installation](./installation.md), then create your first component in the [quick start](./quick-start.md).
+Continue with [installation](./installation.md), then create your first component in the [quick start](./quick-start.mdx).

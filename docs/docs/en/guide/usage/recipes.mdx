@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
 # Recipes
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 `defineTextMotion()` starts an immutable builder. Each chain method returns a new builder, so you can share a base recipe and create variations without changing the base.
 
@@ -66,11 +70,15 @@ With `overlayText()`, the renderer derives units from measured native lines. Do 
 
 ## Compose compatible effects
 
+<MotionDemo id="compose" />
+
 Both `.effect(fade().and(rise()))` and `.effect(fade()).effect(rise())` add fade and rise behavior. Built-in `fade`, `rise`, `slide`, `scale`, `pulse`, and `shake` work with both renderers. `typewriter()` requires `nativeText()`; `lineReveal()` requires `overlayText()`.
 
 Splitters, timelines, effects, and renderers are opaque public handles. Pass them to the builder rather than accessing internal descriptors. The root API does not export custom effect factories or a renderer-extension SDK.
 
 ## Configure playback
+
+<MotionDemo id="spring" />
 
 ```tsx
 import { defineTextMotion, fade, nativeText } from '@react-native-motion-kit/text-motion';
@@ -99,4 +107,4 @@ export function Message() {
 
 Motion options follow the relevant Reanimated timing or spring configuration, except `reduceMotion`, which belongs to the accessibility policy. Timeline delays use seconds; timing `duration` uses milliseconds. Function-valued options such as easing are compared by reference: reuse the same function when rerenders should preserve playback.
 
-Passing `progress` to an instance gives the app ownership of playback and bypasses `.motion()` for that instance. Use `controls` for discrete commands while retaining recipe-owned playback. See [playback](./playback.md) and the [recipe API](../../api/recipe.md).
+Passing `progress` to an instance gives the app ownership of playback and bypasses `.motion()` for that instance. Use `controls` for discrete commands while retaining recipe-owned playback. See [playback](./playback.mdx) and the [recipe API](../../api/recipe.mdx).

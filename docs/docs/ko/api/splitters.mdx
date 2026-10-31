@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
 # 분할기
+
+라이브 미리보기는 React Native Web에서 실제 라이브러리를 실행합니다. 네이티브 줄 측정이 필요한 예제는 iOS 녹화로 표시합니다.
 
 분할기는 `nativeText()`가 사용할 원문 토큰을 정합니다. 반환되는 불투명 `TextMotionSplitter` 핸들을 `.split(...)`에 전달합니다.
 
@@ -22,9 +26,11 @@ const WordTitle = defineTextMotion()
   .component();
 ```
 
-`overlayText()`는 실제 렌더링된 줄을 직접 측정하므로 어떤 분할기와도 조합할 수 없습니다. [렌더러](./renderers.md)를 참고하세요.
+`overlayText()`는 실제 렌더링된 줄을 직접 측정하므로 어떤 분할기와도 조합할 수 없습니다. [렌더러](./renderers.mdx)를 참고하세요.
 
 ## `words()`
+
+<MotionDemo id="words" />
 
 옵션을 받지 않습니다. `Intl.Segmenter`가 있으면 이를 사용하고, 없으면 내부 대체 구현으로 단어·공백·문장 부호 토큰을 만듭니다. 공백은 배치를 유지하지만 모션 인덱스를 사용하지 않으며, 보이는 문장 부호는 모션 인덱스를 사용할 수 있습니다.
 
@@ -32,11 +38,15 @@ const WordTitle = defineTextMotion()
 
 ## `graphemes()`
 
+<MotionDemo id="graphemes" />
+
 옵션을 받지 않습니다. 문자 단위 모션을 위한 그래핌 기반 토큰을 만듭니다. 서로게이트 쌍과 결합 문자를 자를 수 있는 `text.split('')` 대신 사용하세요.
 
 대체 구현은 일반적인 이모지 시퀀스와 `한` 같은 분해형 한글을 원문 정규화 없이 처리하지만, 모든 유니코드 그래핌 규칙을 구현하지는 않습니다. 일부 복잡한 문자 결합은 나뉠 수 있습니다. 정확한 언어별 경계가 필요하면 [텍스트 분할](../guide/usage/segmentation.md)을 확인하세요.
 
 ## `lines()` — 실험적
+
+<MotionDemo id="lines" />
 
 옵션을 받지 않습니다. 명시적인 `\n` 경계에서 나누며, 토큰의 원문 범위에 줄바꿈 문자를 보존합니다. 너비·글꼴·글자 크기 배율로 생긴 자동 줄바꿈은 **측정하지 않습니다**.
 
@@ -55,6 +65,8 @@ export function Heading() {
 토큰에는 `metadata: { experimental: true, mapping: 'newline-only' }`가 들어갑니다. React Native가 실제로 렌더링한 줄이 필요하면 `overlayText()`와 `lineReveal()`을 사용하세요.
 
 ## `custom(split)`
+
+<MotionDemo id="custom" />
 
 ```ts
 type TextMotionCustomSplit = (

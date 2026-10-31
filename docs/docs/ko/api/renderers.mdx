@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
 # 렌더러
+
+라이브 미리보기는 React Native Web에서 실제 라이브러리를 실행합니다. 네이티브 줄 측정이 필요한 예제는 iOS 녹화로 표시합니다.
 
 `.component()`를 호출하기 전에 `.layout(...)`으로 렌더러를 선택하세요. 두 팩터리는 React 컴포넌트가 아닌 불투명 핸들을 반환합니다.
 
@@ -8,6 +12,8 @@
 | `overlayText()` | React Native가 실제 렌더링한 줄 | 사용 불가 | `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal` |
 
 ## `nativeText(options?)`
+
+<MotionDemo id="words" />
 
 ```ts
 type NativeTextRendererOptions = {
@@ -44,6 +50,8 @@ export function Heading() {
 이 렌더러는 토큰을 감싸는 줄 배치를 사용하므로 단일 `Text`의 정확한 글자 조형·커닝·합자·자동 줄바꿈은 보장하지 않습니다. `textAlign`은 토큰 행의 정렬로 대응하며, 완전한 네이티브 문단 구현으로 바뀌지는 않습니다. 실제 렌더링된 줄의 모션은 `overlayText()`, 중첩 인라인 콘텐츠나 정확한 텍스트 노드 동작은 일반 React Native `Text`를 사용하세요.
 
 ## `overlayText(options?)`
+
+<MotionDemo id="line-reveal" />
 
 ```ts
 type OverlayTextRendererOptions = {
@@ -89,7 +97,7 @@ export function Hero() {
 
 ## 공통 재생·접근성
 
-두 렌더러 모두 자동 재생, 명시적 [controls](../guide/usage/playback.md), 앱이 소유한 `progress`를 지원합니다. `controls`와 `progress`를 함께 넘기지 마세요. 기본 접근성 정책은 전체 문장을 한 번 노출하고 장식용 노드를 숨기며, 컴포넌트의 `accessibilityLabel`로 읽을 레이블을 바꿀 수 있습니다.
+두 렌더러 모두 자동 재생, 명시적 [controls](../guide/usage/playback.mdx), 앱이 소유한 `progress`를 지원합니다. `controls`와 `progress`를 함께 넘기지 마세요. 기본 접근성 정책은 전체 문장을 한 번 노출하고 장식용 노드를 숨기며, 컴포넌트의 `accessibilityLabel`로 읽을 레이블을 바꿀 수 있습니다.
 
 많은 토큰이나 행에 적용하기 전에 [컴포넌트 Props](./component-props.md), [접근성](../guide/usage/accessibility.md), [성능](../guide/usage/performance.md)을 확인하세요. 브라우저 렌더링만으로 iOS·Android의 배치나 성능을 검증할 수는 없습니다.
 

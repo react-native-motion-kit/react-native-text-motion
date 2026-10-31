@@ -55,7 +55,7 @@ export function Heading() {
 
 **`controls` and `progress` are mutually exclusive.** TypeScript rejects the combination and both renderers also throw at runtime. With neither prop, animated content autoplays on mount.
 
-`progress` is normalized: `0` is initial and `1` is final. Finite values outside that range are clamped, and non-finite values are treated as `0`. Timeline delays map it to per-unit progress, so it is not a visible-character percentage. See [Playback](../guide/usage/playback.md) for complete controls and progress examples.
+`progress` is normalized: `0` is initial and `1` is final. Finite values outside that range are clamped, and non-finite values are treated as `0`. Timeline delays map it to per-unit progress, so it is not a visible-character percentage. See [Playback](../guide/usage/playback.mdx) for complete controls and progress examples.
 
 ## Accessibility
 

@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
 # Presets
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 Presets are recipe factories from `@react-native-motion-kit/text-motion/presets`. Each factory returns a builder with words, `nativeText()`, a timeline, and effects already selected. Call `.component()` to create a component, or customize the builder first.
 
@@ -36,6 +40,20 @@ All three factories take no arguments. Their delay values use seconds. They do n
 
 `editorialRise()` suits titles that should unfold from the center. `softWave()` varies word start times for a softer rhythm. `gentleEmphasis()` briefly scales tokens near the midpoint and returns to the final scale; it does not loop.
 
+## Preview the presets
+
+### `editorialRise()`
+
+<MotionDemo id="editorial-rise" />
+
+### `softWave()`
+
+<MotionDemo id="soft-wave" />
+
+### `gentleEmphasis()`
+
+<MotionDemo id="gentle-emphasis" />
+
 ## Customize a preset
 
 ```tsx
@@ -66,4 +84,4 @@ export function Titles() {
 
 Builders are immutable, so the customized variation does not change `StandardTitle`. A later `.timeline(...)` replaces the preset timeline. A later `.effect(...)` adds to its effects instead of replacing them. Start with `defineTextMotion()` when you want a different effect set or a rendered-line recipe with `overlayText()`.
 
-Presets use the same [component props](../../api/component-props.md) and [playback inputs](./playback.md) as custom recipes. Keep generated components outside render functions and pass text as a plain string child.
+Presets use the same [component props](../../api/component-props.md) and [playback inputs](./playback.mdx) as custom recipes. Keep generated components outside render functions and pass text as a plain string child.

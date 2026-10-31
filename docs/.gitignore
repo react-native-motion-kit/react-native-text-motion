@@ -2,5 +2,6 @@ node_modules/
 doc_build/
 .rspress/
 .cache/
+docs/public/demos/
 *.local
 *.log

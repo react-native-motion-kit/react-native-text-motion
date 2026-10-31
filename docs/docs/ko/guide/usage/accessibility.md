@@ -49,7 +49,7 @@ export function Title() {
 
 문자열 자식이 기본 접근성 레이블이 됩니다. 화면의 문구가 축약돼 있다면 `accessibilityLabel`로 설명을 지정할 수 있습니다. `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, `onAccessibilityAction`도 지원합니다.
 
-`allowFontScaling`과 `maxFontSizeMultiplier`를 지원합니다. 특히 실제 렌더링된 줄을 움직일 때는 큰 글꼴 배율과 좁은 너비를 앱에서 확인하세요. 전체 prop 계약은 [컴포넌트 props](../../api/component-props.md), 레이아웃 차이는 [렌더러](../../api/renderers.md)를 참고하세요.
+`allowFontScaling`과 `maxFontSizeMultiplier`를 지원합니다. 특히 실제 렌더링된 줄을 움직일 때는 큰 글꼴 배율과 좁은 너비를 앱에서 확인하세요. 전체 prop 계약은 [컴포넌트 props](../../api/component-props.md), 레이아웃 차이는 [렌더러](../../api/renderers.mdx)를 참고하세요.
 
 ## 앱에서 확인할 항목
 

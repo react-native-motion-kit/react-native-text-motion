@@ -10,7 +10,7 @@ split → layout(renderer) → timeline → effect → motion/accessibility → 
 
 ## 시작 방법 선택하기
 
-일반적인 제목, 라벨, 제품 설명 애니메이션은 [프리셋](../usage/presets.md)으로 시작하세요. 애니메이션 단위, 타이밍, 효과를 직접 선택하려면 [커스텀 레시피](../usage/recipes.md)를 만드세요.
+일반적인 제목, 라벨, 제품 설명 애니메이션은 [프리셋](../usage/presets.mdx)으로 시작하세요. 애니메이션 단위, 타이밍, 효과를 직접 선택하려면 [커스텀 레시피](../usage/recipes.mdx)를 만드세요.
 
 ```tsx
 import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
@@ -45,4 +45,4 @@ export function Hero() {
 
 현재 공개 API에는 커스텀 효과 팩토리, 렌더러 확장 SDK, Skia 효과, `pause`/`seek`/`reverse`, 스크롤·제스처·화면 포커스·in-view 전용 드라이버가 없습니다. 앱 이벤트는 `controls`로 연결하고 연속적인 shared value는 `progress`로 연결할 수 있습니다. 텍스트 변경은 새 텍스트의 등장만 처리합니다. 퇴장 애니메이션을 위해 이전 텍스트를 유지하거나 스트리밍 텍스트 API를 제공하지 않습니다.
 
-[설치](./installation.md)를 마친 뒤 [빠른 시작](./quick-start.md)에서 첫 컴포넌트를 만들어 보세요.
+[설치](./installation.md)를 마친 뒤 [빠른 시작](./quick-start.mdx)에서 첫 컴포넌트를 만들어 보세요.

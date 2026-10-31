@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
 # 프리셋
+
+라이브 미리보기는 React Native Web에서 실제 라이브러리를 실행합니다. 네이티브 줄 측정이 필요한 예제는 iOS 녹화로 표시합니다.
 
 프리셋은 `@react-native-motion-kit/text-motion/presets`에서 가져오는 레시피 팩토리입니다. 각 팩토리는 단어 분할, `nativeText()`, 타임라인, 효과를 미리 선택한 빌더를 반환합니다. `.component()`로 컴포넌트를 만들거나 빌더를 먼저 수정할 수 있습니다.
 
@@ -36,6 +40,20 @@ export function ProductHeader() {
 
 `editorialRise()`는 중앙에서 펼쳐지는 제목에 어울립니다. `softWave()`는 단어의 시작 시간을 달리해 부드러운 리듬을 만듭니다. `gentleEmphasis()`는 애니메이션 중간 부근에서 토큰을 잠시 확대했다가 최종 크기로 돌아오며, 반복 재생하지 않습니다.
 
+## 프리셋 미리보기
+
+### `editorialRise()`
+
+<MotionDemo id="editorial-rise" />
+
+### `softWave()`
+
+<MotionDemo id="soft-wave" />
+
+### `gentleEmphasis()`
+
+<MotionDemo id="gentle-emphasis" />
+
 ## 프리셋 수정하기
 
 ```tsx
@@ -66,4 +84,4 @@ export function Titles() {
 
 빌더는 불변이므로 수정한 변형이 `StandardTitle`을 바꾸지 않습니다. 뒤에서 호출한 `.timeline(...)`은 프리셋 타임라인을 교체합니다. `.effect(...)`는 기존 효과를 교체하지 않고 추가합니다. 효과 구성을 바꾸거나 `overlayText()`로 실제 줄 단위 레시피를 만들려면 `defineTextMotion()`에서 시작하세요.
 
-프리셋도 커스텀 레시피와 같은 [컴포넌트 props](../../api/component-props.md)와 [재생 입력](./playback.md)을 사용합니다. 생성한 컴포넌트는 렌더 함수 밖에 정의하고 자식으로 일반 문자열을 전달하세요.
+프리셋도 커스텀 레시피와 같은 [컴포넌트 props](../../api/component-props.md)와 [재생 입력](./playback.mdx)을 사용합니다. 생성한 컴포넌트는 렌더 함수 밖에 정의하고 자식으로 일반 문자열을 전달하세요.

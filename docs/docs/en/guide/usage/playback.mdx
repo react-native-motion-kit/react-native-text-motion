@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
 # Playback
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 Choose who owns playback: the component, an event, or an app-owned Reanimated shared value.
 
@@ -10,6 +14,8 @@ Choose who owns playback: the component, an event, or an app-owned Reanimated sh
 
 ## Autoplay and text updates
 
+<MotionDemo id="autoplay" />
+
 On mount, visible animated tokens play from their initial styles to their final styles. Passing `controls` keeps this mount autoplay; it does not make a component wait for its first command.
 
 - Rerendering the same text with the same recipe preserves playback already in progress.
@@ -19,9 +25,11 @@ On mount, visible animated tokens play from their initial styles to their final 
 
 Text changes are enter-only. There is no exit animation, crossfade, or old/new token transition. In external-progress mode, new text uses the current shared value instead of starting autoplay. Commands always target the currently rendered text.
 
-Create recipe components outside render so React can preserve their identity. See [Recipes](./recipes.md).
+Create recipe components outside render so React can preserve their identity. See [Recipes](./recipes.mdx).
 
 ## Event-driven controls
+
+<MotionDemo id="controls" />
 
 `useTextMotionControls()` returns a stable command channel. Pass it explicitly to each component that should receive commands.
 
@@ -76,6 +84,8 @@ Use controls for buttons, screen-focus events wired by your app, or onboarding s
 
 ## App-owned progress
 
+<MotionDemo id="progress" />
+
 Use a Reanimated `SharedValue<number>` when text should follow another animation, a scroll value, or a gesture value your app already owns.
 
 ```tsx
@@ -129,9 +139,13 @@ Timelines still shape when each token starts. Whitespace does not take a delay s
 
 ### Typewriter progress
 
+<MotionDemo id="typewriter-progress" />
+
+The preview shows **timeline progress** and **visible characters** separately. The character count excludes spaces and includes punctuation and emoji; it updates during playback and when you move progress backward.
+
 `typewriter()` shows a token once its local progress is greater than zero. Progress is **not the fraction of characters visible**: for ten visible characters with `stagger(0.05)`, all are visible just after about `0.310345`. Moving progress backward across a start threshold hides that character again. Use a linear external timing curve for evenly spaced threshold crossings in time.
 
-The effect preserves the completed phrase's layout. It does not add a cursor or provide text streaming. See [Effects](../../api/effects.md) and [Examples](./examples.md).
+The effect preserves the completed phrase's layout. It does not add a cursor or provide text streaming. See [Effects](../../api/effects.mdx) and [Examples](./examples.mdx).
 
 ## Boundaries
 

@@ -49,7 +49,7 @@ Do not pass `reduceMotion` to `.motion()` options. Text Motion exposes reduced-m
 
 The string child supplies the default accessible label. An explicit `accessibilityLabel` can describe text whose visual wording is abbreviated. Supported accessibility props also include `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, and `onAccessibilityAction`.
 
-`allowFontScaling` and `maxFontSizeMultiplier` are supported. Verify larger font scales and narrow widths in your app, especially for rendered-line motion. See [Component props](../../api/component-props.md) for the complete prop contract and [Renderers](../../api/renderers.md) for layout differences.
+`allowFontScaling` and `maxFontSizeMultiplier` are supported. Verify larger font scales and narrow widths in your app, especially for rendered-line motion. See [Component props](../../api/component-props.md) for the complete prop contract and [Renderers](../../api/renderers.mdx) for layout differences.
 
 ## Check in your app
 

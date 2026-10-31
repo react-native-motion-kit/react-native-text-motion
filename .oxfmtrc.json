@@ -8,7 +8,8 @@
     "dist",
     "doc_build",
     ".rspress",
-    "**/*.md"
+    "**/*.md",
+    "**/*.mdx"
   ],
   "sortImports": {
     "groups": [

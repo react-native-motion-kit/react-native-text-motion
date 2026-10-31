@@ -66,4 +66,4 @@ import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
 
 Built-in primitives come from the package root. The three presets come from `/presets`. Do not import internal renderer or descriptor files.
 
-Continue to the [quick start](./quick-start.md).
+Continue to the [quick start](./quick-start.mdx).

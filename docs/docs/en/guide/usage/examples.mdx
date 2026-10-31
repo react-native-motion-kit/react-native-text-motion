@@ -1,8 +1,14 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
 # Examples
 
-These examples use the current public API. Run them in a React Native app after [installation](../getting-started/installation.md). The documentation site presents code; it does not execute these native examples in the browser.
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
+
+These examples use the current public API. Run them in a React Native app after [installation](../getting-started/installation.md). Use each preview to inspect the motion and replay it alongside the code.
 
 ## Start with a preset
+
+<MotionDemo id="editorial-rise" />
 
 Presets are recipe factories imported from the `/presets` subpath. Create the component once outside render.
 
@@ -20,9 +26,11 @@ export function Hero() {
 }
 ```
 
-See [Presets](./presets.md) for `softWave()` and `gentleEmphasis()`.
+See [Presets](./presets.mdx) for `softWave()` and `gentleEmphasis()`.
 
 ## Word reveal with replay
+
+<MotionDemo id="controls" />
 
 ```tsx
 import { Button, View } from 'react-native';
@@ -56,9 +64,11 @@ export function ReplayExample() {
 }
 ```
 
-`stagger(0.04)` sets starts 40ms apart; `duration: 360` controls each token's motion in milliseconds. Mount autoplay remains enabled with controls. See [Playback](./playback.md) for external progress and the full command set.
+`stagger(0.04)` sets starts 40ms apart; `duration: 360` controls each token's motion in milliseconds. Mount autoplay remains enabled with controls. See [Playback](./playback.mdx) for external progress and the full command set.
 
 ## Reveal rendered lines
+
+<MotionDemo id="line-reveal" />
 
 Use native rendered lines when a title should wrap with the available width. Do not add a splitter to this recipe.
 
@@ -91,9 +101,11 @@ export function RenderedLinesExample() {
 }
 ```
 
-`overlayText()` measures the paragraph after width, font, font scale, and shaping are applied. `lines()` only splits explicit newline characters. See [Renderers](../../api/renderers.md).
+`overlayText()` measures the paragraph after width, font, font scale, and shaping are applied. `lines()` only splits explicit newline characters. See [Renderers](../../api/renderers.mdx).
 
 ## Typewriter with fixed layout
+
+<MotionDemo id="typewriter" />
 
 ```tsx
 import { Button, View } from 'react-native';
@@ -132,7 +144,7 @@ export function Greeting() {
 
 The complete phrase reserves its space from the start. Each visible token is revealed at its timeline start; spaces and hard newlines keep their space without taking a delay slot. `duration: 0` makes the per-token reveal instant. Typewriter requires `nativeText()` and does not provide a cursor, streaming, or exact single-`Text` wrapping.
 
-For a different phrase that must type from the beginning, remount it with a new React `key`. Appending text is not a streaming API. See [Effects](../../api/effects.md) for composition and [Segmentation](./segmentation.md) for grapheme fallback limits.
+For a different phrase that must type from the beginning, remount it with a new React `key`. Appending text is not a streaming API. See [Effects](../../api/effects.mdx) for composition and [Segmentation](./segmentation.md) for grapheme fallback limits.
 
 ## Run the repository example
 

@@ -12,11 +12,11 @@ Text Motion is intended for short, high-value UI text: titles, labels, onboardin
 - Test shared controls with the actual number of mounted rows: one command broadcasts to all attached components.
 - Use `overlayText()` when the motion should follow rendered lines. It measures native text and renders clipped paragraph copies per line; fewer motion units alone do not establish that it will be faster for your layout.
 
-See [Renderers](../../api/renderers.md) for the layout tradeoffs and [Playback](./playback.md) for command and progress ownership.
+See [Renderers](../../api/renderers.mdx) for the layout tradeoffs and [Playback](./playback.mdx) for command and progress ownership.
 
 ## Profile the example app
 
-Run the repository example on the platform you want to measure. See [Examples](./examples.md) for commands.
+Run the repository example on the platform you want to measure. See [Examples](./examples.mdx) for commands.
 
 Open **Playback → Renderer Performance**. The probe includes word and grapheme workloads, Typewriter, repeated replay, shared rows, and externally driven progress. **Playback → Controls Stress** provides additional command fan-out cases. **Layout → Line Reveal** and **Layout → Line Layout Probe** help inspect width, alignment, font-scale, hard-newline, and language behavior.
 

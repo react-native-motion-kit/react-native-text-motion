@@ -41,5 +41,23 @@ and a production domain must be configured separately.
 - Rspress generates `llms.txt` and full documentation text for AI tools.
 - Link to official setup instructions for Reanimated and Worklets; the package's
   peer minimums are not a complete native dependency compatibility matrix.
-- Hosted demos are not configured. The examples page provides working recipes
-  and instructions for running the local Expo app.
+- Inline demos run the actual library using an isolated React Native Web bundle.
+  Press Run example to load one, use its replay/controls, and close it to unload.
+  Reduced-motion preferences remain respected. Browser playback illustrates the
+  API; it is not native performance evidence.
+- Open **View code** below an example to inspect and copy that demo's
+  recipe, including its shared defaults and text. The second view contains the
+  complete shared player source for playback handlers and styles. These views
+  are extracted from the same Expo source files during development, checks,
+  typechecking, and production builds, rather than maintained as separate samples.
+- The preview follows the document's light/dark appearance without restarting
+  playback. The wrapper and embedded app share appearance data only. See the
+  repository's `DESIGN.md` for the documentation demo's visual constraints.
+- `pnpm docs:dev` and `pnpm docs:build` first export the demo app from `example/`
+  into ignored `docs/public/demos/`. After changing preview recipes during a dev
+  session, run `pnpm -C docs demos:build` again and reopen the preview.
+- The native `overlayText()` / `lineReveal()` demo uses an iOS simulator recording
+  in `docs/public/media/`, because React Native Web does not provide the native
+  `onTextLayout` event required for rendered-line measurement.
+- Native recordings use English text with matching light/dark palettes. The
+  video and poster follow the document theme, just like the live preview shell.

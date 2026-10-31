@@ -1,4 +1,8 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
 # Timelines
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
 
 Timelines assign start delays to visible motion units: source tokens for `nativeText()` and measured lines for `overlayText()`. **All timeline delays are in seconds.** Whitespace and non-animated layout units do not consume motion indices.
 
@@ -27,6 +31,8 @@ Here `0.04` means a 40ms delay step. The `300` motion duration is **milliseconds
 
 ## `stagger(step, options?)`
 
+<MotionDemo id="stagger" />
+
 ```ts
 type TextMotionStaggerFrom = 'start' | 'center' | 'end' | 'edges' | number;
 type TextMotionStaggerOptions = { from?: TextMotionStaggerFrom };
@@ -53,6 +59,8 @@ stagger(0.04, { from: 2 });
 
 ## `wave(options?)`
 
+<MotionDemo id="wave" />
+
 ```ts
 type TextMotionWaveOptions = {
   amplitude?: number;
@@ -74,6 +82,8 @@ wave({ amplitude: 0.06, wavelength: 5 });
 
 ## `sequence(...timelines)`
 
+<MotionDemo id="sequence" />
+
 Accepts zero or more timeline handles and **adds their delays for each unit**. This composes delay patterns; it does not wait for one whole animation to finish before starting another.
 
 ```tsx
@@ -83,6 +93,8 @@ sequence(stagger(0.02), wave({ amplitude: 0.04, wavelength: 4 }));
 `sequence()` with no arguments produces zero delay.
 
 ## `parallel(...timelines)`
+
+<MotionDemo id="parallel" />
 
 Accepts zero or more timeline handles and chooses the **earliest delay for each unit**.
 
@@ -94,7 +106,7 @@ parallel(stagger(0.08), wave({ amplitude: 0.05, wavelength: 3 }));
 
 ## Controlled progress
 
-In [external progress mode](../guide/usage/playback.md), timeline delays still shape each unit's local progress. The app controls the shared value's timing curve; `.motion()` does not run. A timeline is a delay pattern, not a separate playback controller.
+In [external progress mode](../guide/usage/playback.mdx), timeline delays still shape each unit's local progress. The app controls the shared value's timing curve; `.motion()` does not run. A timeline is a delay pattern, not a separate playback controller.
 
 ## Handles and validation
 
