@@ -13,6 +13,11 @@ They are cropped to the text area, encoded as H.264, and have no audio. Each
 poster is a frame extracted from its recording. No animation was recreated with
 CSS. The original clips were refreshed on 2026-10-31.
 
+The current captures include the line-isolation correction from commit
+`a0188e9`, submitted separately in [PR #5](https://github.com/react-native-motion-kit/react-native-text-motion/pull/5).
+The recording refresh belongs to the documentation PR; the renderer patch and
+regression tests remain isolated in that library PR.
+
 To capture a fresh version after changing the recipe, launch the repository's
 native example with these environment variables:
 
