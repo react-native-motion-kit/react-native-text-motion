@@ -134,6 +134,12 @@ for (const asset of [
   'line-reveal-light.jpg',
   'line-reveal.en.vtt',
   'line-reveal.ko.vtt',
+  'width-reflow.mp4',
+  'width-reflow.jpg',
+  'width-reflow-light.mp4',
+  'width-reflow-light.jpg',
+  'width-reflow.en.vtt',
+  'width-reflow.ko.vtt',
 ]) {
   const file = path.join(root, 'public/media', asset);
   assert(existsSync(file) && statSync(file).size > 0, `Missing native demo asset: ${asset}`);

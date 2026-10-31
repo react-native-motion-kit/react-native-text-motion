@@ -103,6 +103,12 @@ export function RenderedLinesExample() {
 
 `overlayText()`는 너비, 글꼴, 글꼴 배율, 글자 조형이 적용된 문단을 측정합니다. `lines()`는 명시적인 줄바꿈 문자만 나눕니다. [렌더러](../../api/renderers.mdx)를 참고하세요.
 
+## 너비가 바뀌어도 진행률 유지하기
+
+<MotionDemo id="width-reflow" />
+
+이 iOS 녹화는 명시적 줄바꿈이 없는 긴 영문 문단을 사용합니다. 네이티브 예제의 **Narrow**와 **Wide**는 React Native 레이아웃 너비를 `220`과 `320`으로 전환합니다. 진행률 컨트롤로 너비 변경 전후에 `progress`를 `0.5`로 유지한 뒤 각 너비에서 다시 재생하며, 새로 측정한 원문 문단에 맞춰 마스크가 배치되는지 확인할 수 있습니다.
+
 ## 레이아웃을 유지하는 Typewriter
 
 <MotionDemo id="typewriter" />

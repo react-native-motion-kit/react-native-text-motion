@@ -30,6 +30,7 @@ export function generateDemoSources({ recipesSource, playerSource, catalog }) {
   const checker = ts.createProgram([fileName], options, host).getTypeChecker();
   const declarations = new Map();
   const declarationSymbols = new Map();
+  const variantDeclarations = [];
   const imports = [];
   const importSymbols = new Set();
 
@@ -37,6 +38,9 @@ export function generateDemoSources({ recipesSource, playerSource, catalog }) {
     if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         if (!ts.isIdentifier(declaration.name)) continue;
+        if (declaration.name.text === 'docsDemoVariants') {
+          variantDeclarations.push(declaration);
+        }
         declarations.set(declaration.name.text, declaration);
         declarationSymbols.set(checker.getSymbolAtLocation(declaration.name), declaration);
       }
@@ -69,28 +73,33 @@ export function generateDemoSources({ recipesSource, playerSource, catalog }) {
     throw new Error('Demo values must be object literals or top-level object aliases.');
   }
 
-  const registry = objectInitializer(declarations.get('docsDemoRecipes')?.initializer);
-  const entries = new Map();
-  for (const property of registry.properties) {
-    if (
-      !ts.isPropertyAssignment(property) ||
-      (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name))
-    ) {
-      throw new Error('The demo registry must use explicit named properties.');
+  function registryEntries(registry, label) {
+    const entries = new Map();
+    for (const property of registry.properties) {
+      if (
+        !ts.isPropertyAssignment(property) ||
+        (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name))
+      ) {
+        throw new Error(`The ${label} registry must use explicit named properties.`);
+      }
+      const name = property.name.text;
+      if (entries.has(name)) throw new Error(`Duplicate ${label} ID: ${name}`);
+      entries.set(name, objectInitializer(property.initializer));
     }
-    const name = property.name.text;
-    if (entries.has(name)) throw new Error(`Duplicate demo ID: ${name}`);
-    entries.set(name, objectInitializer(property.initializer));
+    return entries;
   }
+
+  const entries = registryEntries(
+    objectInitializer(declarations.get('docsDemoRecipes')?.initializer),
+    'demo',
+  );
 
   const catalogIds = Object.keys(catalog).toSorted();
   if (JSON.stringify([...entries.keys()].toSorted()) !== JSON.stringify(catalogIds)) {
     throw new Error('The demo registry and documentation catalog must have identical IDs.');
   }
 
-  const recipes = {};
-  for (const id of Object.keys(catalog)) {
-    const initializer = entries.get(id);
+  function extractSource(initializer) {
     const neededDeclarations = new Set();
     const neededImports = new Set();
 
@@ -144,10 +153,38 @@ export function generateDemoSources({ recipesSource, playerSource, catalog }) {
       chunks.push(`${kind} ${declaration.getText(source)};`);
     }
     chunks.push(`const demo = ${initializer.getText(source)};`);
-    recipes[id] = `${chunks.join('\n\n')}\n`;
+    return `${chunks.join('\n\n')}\n`;
   }
 
-  return { recipes, player: playerSource };
+  const recipes = Object.fromEntries(
+    Object.keys(catalog).map((id) => [id, extractSource(entries.get(id))]),
+  );
+  const variants = {};
+  if (variantDeclarations.length > 0) {
+    const declaration = variantDeclarations[0];
+    const statement = declaration.parent.parent;
+    if (
+      variantDeclarations.length !== 1 ||
+      !(declaration.parent.flags & ts.NodeFlags.Const) ||
+      !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      throw new Error(
+        'The variant registry must be one top-level exported const docsDemoVariants.',
+      );
+    }
+    const variantEntries = registryEntries(objectInitializer(declaration.initializer), 'variant');
+    for (const [id, variantOptions] of variantEntries) {
+      if (!Object.hasOwn(catalog, id)) throw new Error(`Unknown variant demo ID: ${id}`);
+      variants[id] = Object.fromEntries(
+        [...registryEntries(variantOptions, 'variant option')].map(([option, initializer]) => [
+          option,
+          extractSource(initializer),
+        ]),
+      );
+    }
+  }
+
+  return { recipes, player: playerSource, variants };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

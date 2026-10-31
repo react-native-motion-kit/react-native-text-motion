@@ -95,6 +95,12 @@ export function Hero() {
 
 이는 렌더링된 줄의 모션이며, 줄 안의 단어·문자 매핑은 아닙니다. `onTextLayout`, `numberOfLines`, 텍스트 선택, 인라인 링크를 컴포넌트 props로 공개하지 않습니다.
 
+### 너비가 달라질 때 줄 다시 배치하기
+
+<MotionDemo id="width-reflow" />
+
+이 iOS 녹화는 명시적 줄바꿈이 없는 긴 영문 문단을 React Native 레이아웃 너비 `220`과 `320`에서 보여줍니다. 네이티브 예제의 **Narrow**와 **Wide** 버튼으로 사용 가능한 너비를 바꾸고, 진행률 컨트롤로 너비 변경 중 `progress`를 `0.5`로 유지한 뒤 각 너비에서 다시 재생합니다. 줄 마스크는 다시 배치된 원문 문단의 네이티브 측정값을 따릅니다.
+
 ## 공통 재생·접근성
 
 두 렌더러 모두 자동 재생, 명시적 [controls](../guide/usage/playback.mdx), 앱이 소유한 `progress`를 지원합니다. `controls`와 `progress`를 함께 넘기지 마세요. 기본 접근성 정책은 전체 문장을 한 번 노출하고 장식용 노드를 숨기며, 컴포넌트의 `accessibilityLabel`로 읽을 레이블을 바꿀 수 있습니다.

@@ -1,7 +1,7 @@
 import type { SharedValue } from 'react-native-reanimated';
 
 import { useTextMotionControls } from '@react-native-motion-kit/text-motion';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   cancelAnimation,
@@ -22,9 +22,11 @@ import {
 } from '../../packages/text-motion/src/renderers/rendererMotion';
 import {
   docsDemoRecipes,
+  docsDemoVariants,
   typewriterRecipe,
   type DocsDemoId,
   type DocsDemoLanguage,
+  type DocsStaggerDirection,
 } from './docsDemoRecipes';
 
 const captureMode = process.env.EXPO_PUBLIC_TEXT_MOTION_CAPTURE === '1';
@@ -65,10 +67,12 @@ function initialSelection(): {
   language: DocsDemoLanguage;
   embedded: boolean;
   theme: DemoTheme;
+  direction: DocsStaggerDirection;
 } {
   let requested = process.env.EXPO_PUBLIC_TEXT_MOTION_DEMO_ID;
   let language: DocsDemoLanguage = 'en';
   let embedded = false;
+  let direction: DocsStaggerDirection = 'start';
   let theme: DemoTheme =
     captureMode && process.env.EXPO_PUBLIC_TEXT_MOTION_CAPTURE_THEME === 'light' ? 'light' : 'dark';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -77,12 +81,17 @@ function initialSelection(): {
     language = parameters.get('lang') === 'ko' ? 'ko' : 'en';
     embedded = parameters.get('embedded') === '1';
     theme = parameters.get('theme') === 'light' ? 'light' : 'dark';
+    const requestedDirection = parameters.get('variant');
+    if (requestedDirection && Object.hasOwn(docsDemoVariants.stagger, requestedDirection)) {
+      direction = requestedDirection as DocsStaggerDirection;
+    }
   }
   return {
     id: requested && Object.hasOwn(demoCatalog, requested) ? (requested as DocsDemoId) : 'words',
     language,
     embedded,
     theme,
+    direction,
   };
 }
 
@@ -102,6 +111,9 @@ const copy = {
     characterCountNote: 'Excludes spaces; includes punctuation and emoji.',
     reducedMotion: 'Reduced motion is enabled. The complete phrase stays visible.',
     controlsNote: 'Play moves toward the final state; stop/play is not an exact pause/resume API.',
+    narrow: 'Narrow',
+    wide: 'Wide',
+    widthNote: 'Change width at 50% to compare the measured lines.',
     nativeOnly:
       'This renderer measures native text lines. Watch its iOS recording in the documentation.',
   },
@@ -121,6 +133,9 @@ const copy = {
     reducedMotion: '모션 줄이기가 켜져 있어 전체 문장을 표시합니다.',
     controlsNote:
       '재생은 최종 상태를 향해 움직입니다. 정지 후 재생은 정확한 일시 정지·이어 재생 API가 아닙니다.',
+    narrow: '좁게',
+    wide: '넓게',
+    widthNote: '50%에서 폭을 바꾸며 실제 줄 배치를 비교하세요.',
     nativeOnly: '이 렌더러는 네이티브 텍스트 줄을 측정합니다. 문서의 iOS 녹화 영상을 확인하세요.',
   },
 };
@@ -253,8 +268,94 @@ function ProgressReadout({
   );
 }
 
+function WidthReflowPreview({ language }: { language: DocsDemoLanguage }) {
+  const demo = docsDemoRecipes['width-reflow'];
+  const MotionText = demo.Component;
+  const [widthMode, setWidthMode] = useState<'narrow' | 'wide'>('narrow');
+  const [targetProgress, setTargetProgress] = useState(0.5);
+  const progress = useSharedValue(0.5);
+  const reducedMotion = useReducedMotion();
+  const palette = useContext(PaletteContext);
+  const content = copy[language];
+
+  const changeProgress = (value: number) => {
+    cancelAnimation(progress);
+    progress.value = value;
+    setTargetProgress(value);
+  };
+  const replay = useCallback(() => {
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 1400 });
+    setTargetProgress(1);
+  }, [progress]);
+
+  useEffect(() => {
+    if (!captureMode || reducedMotion) return;
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    const cycle = () => {
+      setWidthMode('narrow');
+      progress.value = 0.5;
+      setTargetProgress(0.5);
+      timers = [
+        setTimeout(() => setWidthMode('wide'), 2500),
+        setTimeout(() => setWidthMode('narrow'), 5000),
+        setTimeout(replay, 6500),
+        setTimeout(() => {
+          setWidthMode('wide');
+          replay();
+        }, 9000),
+      ];
+    };
+    cycle();
+    const interval = setInterval(cycle, 12000);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(interval);
+      cancelAnimation(progress);
+    };
+  }, [progress, reducedMotion, replay]);
+
+  useEffect(() => () => cancelAnimation(progress), [progress]);
+
+  return (
+    <View style={styles.widthDemo}>
+      <View style={styles.widthStage}>
+        <View style={{ width: demo.widths[widthMode] }}>
+          <MotionText progress={progress} style={[styles.widthText, { color: palette.foreground }]}>
+            {demo.text[language]}
+          </MotionText>
+        </View>
+      </View>
+      <View style={styles.widthControls}>
+        <View style={styles.actions}>
+          {(['narrow', 'wide'] as const).map((mode) => (
+            <DemoButton
+              key={mode}
+              label={`${content[mode]} · ${demo.widths[mode]}`}
+              selected={widthMode === mode}
+              onPress={() => setWidthMode(mode)}
+            />
+          ))}
+        </View>
+        <View style={styles.actions}>
+          {[0, 0.5, 1].map((value) => (
+            <DemoButton
+              key={value}
+              label={`${value * 100}%`}
+              selected={targetProgress === value}
+              onPress={() => changeProgress(value)}
+            />
+          ))}
+          <DemoButton label={content.replay} onPress={replay} />
+        </View>
+        <Text style={[styles.note, { color: palette.muted }]}>{content.widthNote}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function DocsDemo() {
-  const [{ id, language, embedded, theme: initialTheme }] = useState(initialSelection);
+  const [{ id, language, embedded, theme: initialTheme, direction }] = useState(initialSelection);
   const [theme, setTheme] = useState<DemoTheme>(initialTheme);
   const [mountKey, setMountKey] = useState(0);
   const [status, setStatus] = useState<'ready' | 'playing' | 'stopped' | 'initial'>('ready');
@@ -263,7 +364,7 @@ export default function DocsDemo() {
   const progress = useSharedValue(0);
   const reducedMotion = useReducedMotion();
   const content = copy[language];
-  const demo = docsDemoRecipes[id];
+  const demo = id === 'stagger' ? docsDemoVariants.stagger[direction] : docsDemoRecipes[id];
   const MotionText = demo.Component;
   const isProgress = id === 'progress' || id === 'typewriter-progress';
   const isControls = id === 'controls';
@@ -293,14 +394,14 @@ export default function DocsDemo() {
   }, [embedded]);
 
   useEffect(() => {
-    if (!captureMode || reducedMotion || nativeOnly) return;
+    if (!captureMode || reducedMotion || nativeOnly || id === 'width-reflow') return;
     const initialReplay = setTimeout(controls.replay, 750);
     const replayInterval = setInterval(controls.replay, 3000);
     return () => {
       clearTimeout(initialReplay);
       clearInterval(replayInterval);
     };
-  }, [controls, nativeOnly, reducedMotion]);
+  }, [controls, id, nativeOnly, reducedMotion]);
 
   useEffect(() => () => cancelAnimation(progress), [progress]);
 
@@ -325,6 +426,8 @@ export default function DocsDemo() {
         <View style={styles.stage}>
           {nativeOnly ? (
             <Text style={[styles.note, { color: palette.muted }]}>{content.nativeOnly}</Text>
+          ) : id === 'width-reflow' ? (
+            <WidthReflowPreview language={language} />
           ) : isProgress ? (
             <MotionText
               progress={progress}
@@ -346,7 +449,7 @@ export default function DocsDemo() {
           )}
         </View>
 
-        {!nativeOnly && !captureMode && (
+        {!nativeOnly && !captureMode && id !== 'width-reflow' && (
           <View style={[styles.footer, { borderTopColor: palette.border }]}>
             <View style={styles.actions}>
               {isProgress ? (
@@ -448,6 +551,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   captureRoot: { justifyContent: 'center', paddingHorizontal: 30 },
+  widthDemo: { width: '100%', alignItems: 'center', gap: 16 },
+  widthStage: { minHeight: 230, justifyContent: 'center', alignItems: 'center', width: '100%' },
+  widthText: { fontSize: 24, fontWeight: '500', lineHeight: 34, textAlign: 'left' },
+  widthControls: { gap: 8, width: 320, maxWidth: '100%' },
   label: { fontSize: 12, fontWeight: '500' },
   stage: {
     flex: 1,

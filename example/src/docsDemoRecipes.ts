@@ -36,6 +36,7 @@ export type DocsDemoLanguage = 'en' | 'ko';
 type DocsDemoRecipe = {
   Component: TextMotionComponent;
   text: Record<DocsDemoLanguage, string>;
+  widths?: { narrow: number; wide: number };
 };
 
 const accessibility = parentLabelPolicy({ reducedMotion: 'final-state' });
@@ -63,6 +64,39 @@ const typewriterDemo = {
   Component: typewriterRecipe.component(),
   text: { en: 'Hello, motion! 👋', ko: '안녕, 텍스트 모션! 👋' },
 };
+
+const staggerBase = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .effect(fade().and(rise({ y: 12 })))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .accessibility(accessibility);
+const staggerStart = {
+  Component: staggerBase.timeline(stagger(0.14, { from: 'start' })).component(),
+  text: phrase,
+};
+const staggerCenter = {
+  Component: staggerBase.timeline(stagger(0.14, { from: 'center' })).component(),
+  text: phrase,
+};
+const staggerEnd = {
+  Component: staggerBase.timeline(stagger(0.14, { from: 'end' })).component(),
+  text: phrase,
+};
+const staggerEdges = {
+  Component: staggerBase.timeline(stagger(0.14, { from: 'edges' })).component(),
+  text: phrase,
+};
+
+export const docsDemoVariants = {
+  stagger: {
+    start: staggerStart,
+    center: staggerCenter,
+    end: staggerEnd,
+    edges: staggerEdges,
+  },
+};
+export type DocsStaggerDirection = keyof typeof docsDemoVariants.stagger;
 
 export const docsDemoRecipes = {
   'editorial-rise': {
@@ -94,6 +128,19 @@ export const docsDemoRecipes = {
       en: 'Every rendered line\nfinds its own rhythm.',
       ko: '실제 배치된 줄마다\n리듬을 더하세요.',
     },
+  },
+  'width-reflow': {
+    Component: defineTextMotion()
+      .layout(overlayText())
+      .timeline(stagger(0.16))
+      .effect(lineReveal({ y: 24 }))
+      .accessibility(accessibility)
+      .component(),
+    text: {
+      en: 'Every rendered line finds its own rhythm when the available width changes.',
+      ko: 'Every rendered line finds its own rhythm when the available width changes.',
+    },
+    widths: { narrow: 220, wide: 320 },
   },
   words: { Component: Reveal, text: phrase },
   graphemes: {
@@ -132,13 +179,7 @@ export const docsDemoRecipes = {
       .component(),
     text: { en: 'Your phrase / Your rhythm', ko: '원하는 구절 / 원하는 리듬' },
   },
-  stagger: {
-    Component: base
-      .timeline(stagger(0.1, { from: 'end' }))
-      .effect(fade().and(rise()))
-      .component(),
-    text: phrase,
-  },
+  stagger: staggerStart,
   wave: {
     Component: base
       .timeline(wave({ amplitude: 0.25, wavelength: 4 }))

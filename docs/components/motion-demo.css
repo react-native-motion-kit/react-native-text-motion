@@ -19,6 +19,44 @@
   --motion-demo-height: 360px;
 }
 
+.motion-demo[data-demo='width-reflow'] {
+  --motion-demo-height: 380px;
+}
+
+.motion-demo__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding-inline: 16px;
+  border-bottom: 1px solid var(--rp-c-divider);
+  color: var(--rp-c-text-2);
+  font-size: 12px;
+}
+
+.motion-demo__options button {
+  min-height: 44px;
+  appearance: none;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--rp-c-text-2);
+  font-family: var(--rp-font-family-mono);
+  font-size: 12px;
+}
+
+.motion-demo__options button:hover,
+.motion-demo__options button[aria-pressed='true'] {
+  color: var(--rp-c-text-1);
+}
+
+.motion-demo__options button[aria-pressed='true'] {
+  border-bottom-color: var(--rp-c-text-1);
+}
+
 .motion-demo__header {
   display: flex;
   align-items: center;

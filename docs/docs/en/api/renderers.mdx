@@ -95,6 +95,12 @@ Give the paragraph a meaningful available width. Measurement is based on native 
 
 This is rendered-line motion, not word-in-line or character-in-line mapping. It does not expose `onTextLayout`, `numberOfLines`, text selection, or inline links as component props.
 
+### Reflow at different widths
+
+<MotionDemo id="width-reflow" />
+
+This iOS recording shows a long English paragraph without explicit newlines at React Native layout widths of `220` and `320`. The native example's **Narrow** and **Wide** buttons change the available width; its progress controls hold `progress` at `0.5` during the change, then replay at each width. The line masks follow the source paragraph's native measurements after reflow.
+
 ## Shared playback and accessibility
 
 Both renderers support autoplay, explicit [controls](../guide/usage/playback.mdx), and app-owned `progress`. Never pass both `controls` and `progress`. The default accessibility policy exposes the complete phrase once and hides decorative nodes; a component-level `accessibilityLabel` overrides the spoken label.

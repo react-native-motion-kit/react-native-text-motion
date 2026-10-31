@@ -11,6 +11,7 @@
   "typewriter": { "label": "typewriter()", "kind": "live" },
   "typewriter-progress": { "label": "typewriter() + progress", "kind": "live" },
   "line-reveal": { "label": "overlayText() + lineReveal()", "kind": "native" },
+  "width-reflow": { "label": "overlayText() · width reflow", "kind": "native" },
   "words": { "label": "words()", "kind": "live" },
   "graphemes": { "label": "graphemes()", "kind": "live" },
   "lines": { "label": "lines()", "kind": "live" },

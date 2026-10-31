@@ -19,7 +19,10 @@ code labels, heavy cards, and extra fonts or icon packages.
 Let readers compare text motion, replay it, inspect the actual recipe, and see
 timeline progress independently of the Typewriter character count. Success means
 the animated text is the focus and all existing controls remain easy to use.
-Library semantics, documentation routes, and the site home page are outside scope.
+Compare stagger directions with the displayed recipe following the selection.
+Show native line remeasurement when a paragraph switches between 220 and 320
+layout units, including a fixed halfway progress state. Library semantics,
+documentation routes, and the site home page are outside scope.
 
 ## Personas and jobs
 
@@ -38,7 +41,7 @@ preview. Source remains below its own example, with recipe/player selections.
 - Use document surfaces and neutral controls so motion supplies the emphasis.
 - Keep controls near the text and remove excess vertical space.
 - Preserve an explicit React Native Web versus iOS recording distinction.
-- Keep existing behavior and source accuracy; change presentation only.
+- Keep existing library behavior and source accuracy when adding comparisons.
 
 ## Visual language
 
@@ -56,6 +59,10 @@ large whitespace, page transitions, or new font downloads.
 viewing, and preview lifecycle. `DocsDemo` owns the actual library rendering,
 playback actions, and progress/count diagnostics. Reuse Rspress syntax highlighting
 and copy controls. Keep palette values local to the preview implementation.
+For stagger, `MotionDemo` owns a four-button direction group above the preview;
+the selected recipe is shared by the iframe query and generated source. Selecting
+a direction starts that recipe from the beginning. Native width reflow stays an
+iOS recording with real Narrow/Wide and progress controls visible in the capture.
 
 ## Accessibility
 
@@ -80,6 +87,9 @@ live preview unmounts it. Toggling source does not remount the animation. Theme
 updates reach the iframe without resetting playback. Native recordings use English
 sample text and matching light/dark captures with native video controls. Switching
 appearance selects the corresponding recording.
+Stagger selection is available before running the example and while viewing code.
+Source disclosure and source tabs preserve the selection. Each embedded demo owns
+its own direction state. Theme changes preserve that choice.
 Before playback, show its poster and a neutral Play recording button; expose
 native video controls after the user starts it.
 

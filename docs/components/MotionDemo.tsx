@@ -13,12 +13,20 @@ const RuntimeCode = lazy(async () => ({
   default: (await import('@rspress/core/theme-original')).CodeBlockRuntime,
 }));
 
-function NativeDemoVideo({ theme, lang }: { theme: 'dark' | 'light'; lang: 'en' | 'ko' }) {
+function NativeDemoVideo({
+  id,
+  theme,
+  lang,
+}: {
+  id: 'line-reveal' | 'width-reflow';
+  theme: 'dark' | 'light';
+  lang: 'en' | 'ko';
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mounted, setMounted] = useState(false);
   const [started, setStarted] = useState(false);
   const [failed, setFailed] = useState(false);
-  const mediaPath = `/media/line-reveal${theme === 'light' ? '-light' : ''}`;
+  const mediaPath = `/media/${id}${theme === 'light' ? '-light' : ''}`;
 
   // Match the SSG placeholder during hydration, then select the browser theme.
   useEffect(() => setMounted(true), []);
@@ -39,15 +47,19 @@ function NativeDemoVideo({ theme, lang }: { theme: 'dark' | 'light'; lang: 'en' 
           setFailed(true);
         }}
         aria-label={
-          lang === 'ko'
-            ? '실제 iOS 줄 단위 텍스트 애니메이션 녹화'
-            : 'Rendered-line animation recorded on iOS'
+          id === 'width-reflow'
+            ? lang === 'ko'
+              ? '실제 iOS 폭 변경과 줄 재측정 녹화'
+              : 'Width changes and native line remeasurement recorded on iOS'
+            : lang === 'ko'
+              ? '실제 iOS 줄 단위 텍스트 애니메이션 녹화'
+              : 'Rendered-line animation recorded on iOS'
         }
       >
         <source src={withBase(`${mediaPath}.mp4`)} type="video/mp4" />
         <track
           kind="captions"
-          src={withBase(`/media/line-reveal.${lang}.vtt`)}
+          src={withBase(`/media/${id}.${lang}.vtt`)}
           srcLang={lang}
           label={lang === 'ko' ? '한국어' : 'English'}
         />
@@ -100,11 +112,17 @@ export function MotionDemo({ id }: { id: DemoId }) {
   const [previewTheme, setPreviewTheme] = useState(theme);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourceTab, setSourceTab] = useState<SourceTab>('recipe');
+  const [direction, setDirection] = useState<keyof typeof demoSources.variants.stagger>('start');
   const sourceId = useId();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const demo = demos[id];
-  const source = sourceTab === 'recipe' ? demoSources.recipes[id] : demoSources.player;
-  const native = demo.kind === 'native';
+  const source =
+    sourceTab === 'recipe'
+      ? id === 'stagger'
+        ? demoSources.variants.stagger[direction]
+        : demoSources.recipes[id]
+      : demoSources.player;
+  const native = id === 'line-reveal' || id === 'width-reflow';
 
   useEffect(() => {
     // The sandbox has an opaque origin. Only appearance data is sent.
@@ -124,15 +142,41 @@ export function MotionDemo({ id }: { id: DemoId }) {
           {native ? (lang === 'ko' ? 'iOS 녹화' : 'iOS recording') : 'React Native Web'}
         </span>
       </header>
+      {id === 'stagger' ? (
+        <div
+          className="motion-demo__options"
+          role="group"
+          aria-label={lang === 'ko' ? 'stagger 시작 방향' : 'Stagger origin'}
+        >
+          <span>{lang === 'ko' ? '시작 방향' : 'Origin'}</span>
+          {(
+            Object.keys(
+              demoSources.variants.stagger,
+            ) as (keyof typeof demoSources.variants.stagger)[]
+          ).map((option) => (
+            <button
+              type="button"
+              key={option}
+              aria-pressed={direction === option}
+              onClick={() => {
+                setPreviewTheme(theme);
+                setDirection(option);
+              }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {native ? (
-        <NativeDemoVideo key={theme} theme={theme} lang={lang} />
+        <NativeDemoVideo key={`${id}-${theme}`} id={id} theme={theme} lang={lang} />
       ) : playing ? (
         <iframe
           ref={frameRef}
           className="motion-demo__frame"
           sandbox="allow-scripts"
           src={withBase(
-            `/demos/index.html?demo=${id}&lang=${lang}&embedded=1&theme=${previewTheme}`,
+            `/demos/index.html?demo=${id}&lang=${lang}&embedded=1&theme=${previewTheme}${id === 'stagger' ? `&variant=${direction}` : ''}`,
           )}
           title={`${demo.label} ${lang === 'ko' ? '대화형 미리보기' : 'interactive preview'}`}
           loading="lazy"
@@ -233,7 +277,7 @@ export function MotionDemo({ id }: { id: DemoId }) {
                 }
               >
                 <RuntimeCode
-                  key={sourceTab}
+                  key={`${sourceTab}-${id === 'stagger' ? direction : id}`}
                   lang="tsx"
                   title={sourceTab === 'recipe' ? `${id}.tsx` : 'DocsDemo.tsx'}
                   code={source}

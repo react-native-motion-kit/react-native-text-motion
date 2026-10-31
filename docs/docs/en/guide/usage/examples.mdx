@@ -103,6 +103,12 @@ export function RenderedLinesExample() {
 
 `overlayText()` measures the paragraph after width, font, font scale, and shaping are applied. `lines()` only splits explicit newline characters. See [Renderers](../../api/renderers.mdx).
 
+## Keep progress while the paragraph reflows
+
+<MotionDemo id="width-reflow" />
+
+The iOS recording uses a long English paragraph with no explicit newlines. In the native example, **Narrow** and **Wide** switch between React Native layout widths of `220` and `320`. Progress controls hold `progress` at `0.5` across the width change, then replay at each width so you can inspect the masks against the newly measured source paragraph.
+
 ## Typewriter with fixed layout
 
 <MotionDemo id="typewriter" />
