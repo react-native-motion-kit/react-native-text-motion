@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00.000 --> 00:02.500
+At 50% progress, the unbroken phrase wraps into four measured lines at width 220.
+
+00:02.500 --> 00:05.000
+Width 320 remeasures the phrase into three lines while keeping progress at 50%.
+
+00:05.000 --> 00:06.500
+Width 220 restores four lines at the same progress.
+
+00:06.500 --> 00:09.000
+Replay reveals the four narrow lines over 1.4 seconds.
+
+00:09.000 --> 00:11.866
+Replay reveals the three wide lines over 1.4 seconds. Recorded on iOS.

@@ -1,0 +1,112 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
+# 렌더러
+
+라이브 미리보기는 React Native Web에서 실제 라이브러리를 실행합니다. 네이티브 줄 측정이 필요한 예제는 iOS 녹화로 표시합니다.
+
+`.component()`를 호출하기 전에 `.layout(...)`으로 렌더러를 선택하세요. 두 팩터리는 React 컴포넌트가 아닌 불투명 핸들을 반환합니다.
+
+| 렌더러 | 모션 단위 | 분할기 | 지원 효과 |
+| --- | --- | --- | --- |
+| `nativeText()` | 원문의 단어·그래핌·명시적 줄·사용자 정의 토큰 | 선택 | `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `typewriter` |
+| `overlayText()` | React Native가 실제 렌더링한 줄 | 사용 불가 | `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal` |
+
+## `nativeText(options?)`
+
+<MotionDemo id="words" />
+
+```ts
+type NativeTextRendererOptions = {
+  testIDPrefix?: string;
+};
+```
+
+짧은 제목·레이블·온보딩 문구·제품 설명의 기본 선택입니다. 변형이 화면에 적용되도록 애니메이션 토큰을 animated `View` 컨테이너와 내부 `Text`로 렌더링합니다. 정적인 토큰은 일반 텍스트 노드로 남습니다. 명시적인 줄바꿈은 모션 지연 슬롯을 소비하지 않으면서 원문의 줄바꿈을 보존합니다.
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const WordReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText({ testIDPrefix: 'title-word' }))
+  .timeline(stagger(0.04))
+  .effect(fade().and(rise({ y: 12 })))
+  .component();
+
+export function Heading() {
+  return <WordReveal style={{ fontSize: 32 }}>단어에 움직임을 더해요</WordReveal>;
+}
+```
+
+`testIDPrefix`의 기본값은 없습니다. 생성되는 토큰 test ID의 접두사이며, 애니메이션 토큰의 ID는 animated 컨테이너에 붙습니다. 컴포넌트의 `testID`는 부모를 식별합니다. `allowFontScaling` 같은 타이포그래피 props는 내부 텍스트로 전달됩니다.
+
+이 렌더러는 토큰을 감싸는 줄 배치를 사용하므로 단일 `Text`의 정확한 글자 조형·커닝·합자·자동 줄바꿈은 보장하지 않습니다. `textAlign`은 토큰 행의 정렬로 대응하며, 완전한 네이티브 문단 구현으로 바뀌지는 않습니다. 실제 렌더링된 줄의 모션은 `overlayText()`, 중첩 인라인 콘텐츠나 정확한 텍스트 노드 동작은 일반 React Native `Text`를 사용하세요.
+
+## `overlayText(options?)`
+
+<MotionDemo id="line-reveal" />
+
+```ts
+type OverlayTextRendererOptions = {
+  testIDPrefix?: string;
+};
+```
+
+하나의 네이티브 문단을 측정하고 실제 렌더링된 줄마다 마스크를 애니메이션합니다. 너비·글꼴·글자 크기 배율·정렬·언어별 조형에 따라 줄바꿈이 달라지는 경우에 사용하세요. **`.split(...)`을 호출하지 마세요.** TypeScript와 런타임 검사 모두 이 조합을 거부합니다.
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  scale,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+import { View } from 'react-native';
+
+const HeroLines = defineTextMotion()
+  .layout(overlayText({ testIDPrefix: 'hero-line' }))
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18 }).and(scale({ from: 0.98 })))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function Hero() {
+  return (
+    <View style={{ width: 300 }}>
+      <HeroLines style={{ fontSize: 32, lineHeight: 40 }}>
+        화면에 배치된 줄을 따라 한 줄씩 나타나는 반응형 제목
+      </HeroLines>
+    </View>
+  );
+}
+```
+
+문단에 실제로 사용할 수 있는 너비를 제공하세요. 측정은 추정한 글자 수가 아닌 네이티브 텍스트 레이아웃을 기준으로 합니다. 텍스트나 레이아웃 입력이 달라지면 측정값을 갱신합니다. 사용할 수 있는 줄 매핑이 없으면 줄의 위치를 추정해 애니메이션하는 대신 원문을 읽을 수 있게 유지합니다. 시스템 모션 줄이기가 켜져 있으면 완성된 원문 문단을 직접 렌더링합니다.
+
+`testIDPrefix`의 기본값은 없으며, 생성되는 overlay·줄 마스크 ID의 접두사입니다. `lineReveal()`은 각 마스크 안의 문단 복사본을 움직이고, 불투명도는 줄 프레임에 적용합니다. 다른 변형 효과는 측정한 줄 프레임에 적용되므로, `scale()`이나 `pulse()`를 합성해도 렌더러 자체의 reveal 마스크에 잘리지 않고 줄 중심을 기준으로 커질 수 있습니다.
+
+이는 렌더링된 줄의 모션이며, 줄 안의 단어·문자 매핑은 아닙니다. `onTextLayout`, `numberOfLines`, 텍스트 선택, 인라인 링크를 컴포넌트 props로 공개하지 않습니다.
+
+### 너비가 달라질 때 줄 다시 배치하기
+
+<MotionDemo id="width-reflow" />
+
+이 iOS 녹화는 명시적 줄바꿈이 없는 긴 영문 문단을 React Native 레이아웃 너비 `220`과 `320`에서 보여줍니다. 네이티브 예제의 **Narrow**와 **Wide** 버튼으로 사용 가능한 너비를 바꾸고, 진행률 컨트롤로 너비 변경 중 `progress`를 `0.5`로 유지한 뒤 각 너비에서 다시 재생합니다. 줄 마스크는 다시 배치된 원문 문단의 네이티브 측정값을 따릅니다.
+
+## 공통 재생·접근성
+
+두 렌더러 모두 자동 재생, 명시적 [controls](../guide/usage/playback.mdx), 앱이 소유한 `progress`를 지원합니다. `controls`와 `progress`를 함께 넘기지 마세요. 기본 접근성 정책은 전체 문장을 한 번 노출하고 장식용 노드를 숨기며, 컴포넌트의 `accessibilityLabel`로 읽을 레이블을 바꿀 수 있습니다.
+
+많은 토큰이나 행에 적용하기 전에 [컴포넌트 Props](./component-props.md), [접근성](../guide/usage/accessibility.md), [성능](../guide/usage/performance.md)을 확인하세요. 브라우저 렌더링만으로 iOS·Android의 배치나 성능을 검증할 수는 없습니다.
+
+## 렌더러 타입
+
+루트는 `NativeTextRendererOptions`, `OverlayTextRendererOptions`, `TextMotionRenderer`, `TextMotionRendererCapability`, `TextMotionRendererProps`를 내보냅니다. 렌더러 descriptor, 구현 `Component` 필드, capability 팩터리는 내부 API입니다. 공개 렌더러 확장 SDK는 현재 API 범위에 포함되지 않습니다.

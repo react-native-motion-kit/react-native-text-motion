@@ -1,0 +1,24 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run sources:generate && pnpm run demos:build && rspress build",
+    "check": "pnpm run sources:generate && node --test scripts/generate-demo-sources.test.mjs && node scripts/check-docs.mjs",
+    "demos:build": "node scripts/build-demos.mjs",
+    "dev": "pnpm run sources:generate && pnpm run demos:build && rspress dev",
+    "preview": "rspress preview",
+    "sources:generate": "node scripts/generate-demo-sources.mjs",
+    "typecheck": "pnpm run sources:generate && tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rspress/core": "2.0.21",
+    "@shikijs/transformers": "4.4.3",
+    "@types/node": "^24.13.4",
+    "@types/react": "^19.2.0",
+    "react": "catalog:",
+    "react-dom": "19.2.3",
+    "typescript": "catalog:"
+  }
+}

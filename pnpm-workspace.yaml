@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - example
+  - docs
 allowBuilds:
   lefthook: true
 catalog:

@@ -1,0 +1,5 @@
+[
+  { "text": "Guide", "link": "/guide/getting-started/overview.html", "activeMatch": "/guide/" },
+  { "text": "API", "link": "/api/recipe.html", "activeMatch": "/api/" },
+  { "text": "Examples", "link": "/guide/usage/examples.html" }
+]

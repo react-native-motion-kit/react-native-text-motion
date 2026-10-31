@@ -1,5 +1,7 @@
 # @react-native-motion-kit/text-motion
 
+한영 Rspress 문서: [개발 및 빌드 안내](./docs/README.md). `pnpm docs:dev`로 로컬 문서를 실행할 수 있습니다.
+
 React Native에서 고성능 split text animation을 만들기 위한 라이브러리입니다. Reanimated 기반으로 동작하고, 확장 가능한 renderer boundary를 염두에 두고 있습니다.
 
 English documentation: [README.md](./README.md)

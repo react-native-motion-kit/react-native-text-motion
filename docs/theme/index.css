@@ -1,0 +1,15 @@
+.rp-flex:has(.text-motion-install) {
+  width: 100%;
+}
+
+.text-motion-install {
+  width: 100%;
+  max-width: 640px;
+  min-height: auto;
+}
+
+.text-motion-install > p {
+  margin-bottom: 0.75rem;
+  color: var(--rp-c-text-2);
+  font-size: 0.95rem;
+}

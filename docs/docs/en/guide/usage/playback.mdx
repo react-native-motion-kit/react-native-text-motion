@@ -1,0 +1,154 @@
+import { MotionDemo } from '../../../../components/MotionDemo';
+
+# Playback
+
+Live previews run the actual library through React Native Web. Examples that need native line measurements use an iOS recording.
+
+Choose who owns playback: the component, an event, or an app-owned Reanimated shared value.
+
+| Mode | Input | Playback owner |
+| --- | --- | --- |
+| Autoplay | No playback prop | Text Motion starts playback when inputs change. |
+| Commands | `controls={controls}` | Your app sends commands; Text Motion executes the recipe. |
+| External progress | `progress={progress}` | Your app owns the value and its animation curve. |
+
+## Autoplay and text updates
+
+<MotionDemo id="autoplay" />
+
+On mount, visible animated tokens play from their initial styles to their final styles. Passing `controls` keeps this mount autoplay; it does not make a component wait for its first command.
+
+- Rerendering the same text with the same recipe preserves playback already in progress.
+- Changing text replays the affected token animations, including replacements with the same token shape.
+- Changing effective effects, timing, or motion configuration resets affected tokens and uses the new configuration. Function-valued motion options, such as easing functions, are reference-sensitive; reuse their references when playback should continue.
+- Whitespace and static tokens keep their layout but do not animate or consume a motion index.
+
+Text changes are enter-only. There is no exit animation, crossfade, or old/new token transition. In external-progress mode, new text uses the current shared value instead of starting autoplay. Commands always target the currently rendered text.
+
+Create recipe components outside render so React can preserve their identity. See [Recipes](./recipes.mdx).
+
+## Event-driven controls
+
+<MotionDemo id="controls" />
+
+`useTextMotionControls()` returns a stable command channel. Pass it explicitly to each component that should receive commands.
+
+```tsx
+import { Button, View } from 'react-native';
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  useTextMotionControls,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const Reveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(fade().and(rise({ y: 12 })))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+
+export function Headlines() {
+  const controls = useTextMotionControls();
+
+  return (
+    <View>
+      <Reveal controls={controls}>A title with shared playback</Reveal>
+      <Reveal controls={controls}>A subtitle with the same command channel</Reveal>
+      <Button title="Play" onPress={controls.play} />
+      <Button title="Replay" onPress={controls.replay} />
+      <Button title="Reset" onPress={controls.reset} />
+      <Button title="Stop" onPress={controls.stop} />
+    </View>
+  );
+}
+```
+
+| Command | Behavior |
+| --- | --- |
+| `play()` | Plays from the current progress toward the final state. |
+| `replay()` | Resets and plays again with the recipe timeline and motion configuration. |
+| `reset()` | Cancels playback and returns to the initial state. |
+| `stop()` | Cancels playback and keeps the current visual state. |
+
+Commands broadcast to every mounted component attached to that controls object; each uses its own recipe. Commands are not a stored playback state or a queue for future mounts. Components unsubscribe when detached or unmounted.
+
+`stop()` followed by `play()` is not a precise pause/resume API and does not promise the original remaining schedule. Use `replay()` for a complete restart. With the explicit reduced-motion final-state policy active, the final visible state takes priority over reset and replay.
+
+Use controls for buttons, screen-focus events wired by your app, or onboarding steps. There is no provider/context playback API or public component-ref playback API.
+
+## App-owned progress
+
+<MotionDemo id="progress" />
+
+Use a Reanimated `SharedValue<number>` when text should follow another animation, a scroll value, or a gesture value your app already owns.
+
+```tsx
+import { Button, View } from 'react-native';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const ProgressReveal = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.08))
+  .effect(fade().and(rise({ y: 12 })))
+  .component();
+
+export function ProgressExample() {
+  const progress = useSharedValue(0);
+
+  return (
+    <View>
+      <ProgressReveal progress={progress}>
+        Progress drives the whole phrase
+      </ProgressReveal>
+      <Button
+        title="Play"
+        onPress={() => {
+          progress.value = withTiming(1, { duration: 720 });
+        }}
+      />
+      <Button title="Reset" onPress={() => { progress.value = 0; }} />
+    </View>
+  );
+}
+```
+
+`0` renders initial styles and `1` renders final styles. Finite values outside that range are clamped; non-finite values are treated as `0`. Passing `progress` disables internal autoplay and ignores the recipe's `.motion()` configuration for that instance. Set duration and easing where you update the shared value.
+
+The value represents the whole effect timeline. For a token delay `d` and largest token delay `D` in seconds, the current mapping uses a fixed per-token span of `1.0`:
+
+```txt
+localProgress = clamp(progress * (D + 1) - d, 0, 1)
+```
+
+Timelines still shape when each token starts. Whitespace does not take a delay slot. This is not a per-token duration API.
+
+### Typewriter progress
+
+<MotionDemo id="typewriter-progress" />
+
+The preview shows **timeline progress** and **visible characters** separately. The character count excludes spaces and includes punctuation and emoji; it updates during playback and when you move progress backward.
+
+`typewriter()` shows a token once its local progress is greater than zero. Progress is **not the fraction of characters visible**: for ten visible characters with `stagger(0.05)`, all are visible just after about `0.310345`. Moving progress backward across a start threshold hides that character again. Use a linear external timing curve for evenly spaced threshold crossings in time.
+
+The effect preserves the completed phrase's layout. It does not add a cursor or provide text streaming. See [Effects](../../api/effects.mdx) and [Examples](./examples.mdx).
+
+## Boundaries
+
+`controls` and `progress` are mutually exclusive in TypeScript and at runtime. There are no first-class `pause`, `seek`, `reverse`, scroll, gesture, in-view, or screen-focus drivers. Integrate your own events with controls or your own continuous values with progress.
+
+For reduced-motion behavior, see [Accessibility](./accessibility.md). For supported text and accessibility props, see [Component props](../../api/component-props.md).
