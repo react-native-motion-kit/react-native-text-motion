@@ -205,6 +205,10 @@ const LINE_ANIMATION_STYLE = {
   top: 0,
   width: '100%',
 } as const satisfies ViewStyle;
+const LINE_CONTENT_CLIP_STYLE = {
+  overflow: 'hidden',
+  width: '100%',
+} as const satisfies ViewStyle;
 const PARAGRAPH_COPY_STYLE = {
   left: 0,
   position: 'absolute',
@@ -464,14 +468,17 @@ function OverlayTextLineMask({
         style={[LINE_ANIMATION_STYLE, revealContentAnimatedStyle] as StyleProp<ViewStyle>}
         testID={motionTestID}
       >
-        <Text
-          {...HIDDEN_ACCESSIBILITY_PROPS}
-          {...typographyProps}
-          style={[textStyle, PARAGRAPH_COPY_STYLE, { top: createParagraphCopyOffset(line) }]}
-          testID={paragraphTestID}
-        >
-          {children}
-        </Text>
+        {/* Isolate this source line before moving it through the reveal mask. */}
+        <View collapsable={false} style={[LINE_CONTENT_CLIP_STYLE, { height: line.height }]}>
+          <Text
+            {...HIDDEN_ACCESSIBILITY_PROPS}
+            {...typographyProps}
+            style={[textStyle, PARAGRAPH_COPY_STYLE, { top: createParagraphCopyOffset(line) }]}
+            testID={paragraphTestID}
+          >
+            {children}
+          </Text>
+        </View>
       </AnimatedView>
     </AnimatedView>
   );
