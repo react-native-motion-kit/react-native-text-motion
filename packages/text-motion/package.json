@@ -7,7 +7,7 @@
     "ios",
     "react-native"
   ],
-  "homepage": "https://github.com/react-native-motion-kit/react-native-text-motion#readme",
+  "homepage": "https://react-native-text-motion.pages.dev",
   "bugs": {
     "url": "https://github.com/react-native-motion-kit/react-native-text-motion/issues"
   },
@@ -15,7 +15,8 @@
   "author": "harang <dbd02169@naver.com> (https://github.com/saseungmin)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/react-native-motion-kit/react-native-text-motion.git"
+    "url": "git+https://github.com/react-native-motion-kit/react-native-text-motion.git",
+    "directory": "packages/text-motion"
   },
   "files": [
     "src",

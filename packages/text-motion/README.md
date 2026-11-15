@@ -1,47 +1,59 @@
-# @react-native-motion-kit/text-motion
+# React Native Text Motion
 
-High-performance split text animations for React Native, powered by Reanimated and extensible renderers.
+> English | [한국어](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/packages/text-motion/README.ko.md)
 
-Korean documentation: [README.ko.md](./README.ko.md)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/react-native-motion-kit/react-native-text-motion/main/docs/docs/public/logo.png" width="300" alt="React Native Motion Kit logo" />
+</div>
 
-`text-motion` is built for short titles, labels, onboarding copy, product copy, and other UI text that benefits from token-level motion.
+## Overview
 
-It is not a single prop-heavy wrapper like this:
+`@react-native-motion-kit/text-motion` brings composable text animations to React Native with Reanimated. Build reusable animated components for short titles, labels, onboarding copy, and product copy by choosing how text is split, rendered, timed, and animated.
 
-```tsx
-<AnimatedText text="Hello" animation="fadeIn" delay={100} />
-```
+### Key Features
 
-Instead, it helps you create reusable animated text components by composing the text splitting strategy, token renderer, timeline, and effects:
+- **Composable recipes** — Combine splitting, layout, timelines, and effects with a typed API.
+- **Word and character motion** — Animate words or graphemes with `nativeText()`, including character-by-character `typewriter()` reveals.
+- **Rendered-line reveals** — Use `overlayText()` and `lineReveal()` to animate the lines React Native actually rendered.
+- **Playback control** — Trigger play/replay/reset/stop from events or drive progress with an external Reanimated shared value.
+- **Accessibility** — Read the whole phrase as one label, hide decorative tokens from screen readers, and respect reduced motion by default.
+- **Ready-to-use presets** — Start with a preset, then customize its recipe when needed.
 
-```txt
-split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> component
-```
+## Quick Start
 
-Use a preset when you want a good default. Create a custom recipe when you need to decide how text is split, how tokens are rendered, when each visible token starts, and what each token does.
+### Documentation
 
-For TypeScript users, `.component()` is only available after a renderer is selected with `.layout(...)`. `.recipe()` can still be used before layout when you need to inspect or pass around an unfinished recipe.
+[Full documentation](https://react-native-text-motion.pages.dev/) · [Installation](https://react-native-text-motion.pages.dev/guide/getting-started/installation.html) · [Quick start](https://react-native-text-motion.pages.dev/guide/getting-started/quick-start.html)
 
-## Installation
+### Examples
+
+- [Examples gallery](https://react-native-text-motion.pages.dev/guide/usage/examples.html) — Explore demos and their source code.
+- [Expo example app](https://github.com/react-native-motion-kit/react-native-text-motion/tree/main/example) — Run recipes, playback controls, and native rendered-line examples.
+
+### AI
+
+See [Use with AI tools](https://react-native-text-motion.pages.dev/guide/getting-started/ai.html) for documentation workflows.
+
+- [llms.txt](https://react-native-text-motion.pages.dev/llms.txt) — A structured index of documentation pages.
+- [llms-full.txt](https://react-native-text-motion.pages.dev/llms-full.txt) — The complete documentation in one text file.
+- [Korean index](https://react-native-text-motion.pages.dev/ko/llms.txt) · [Korean full documentation](https://react-native-text-motion.pages.dev/ko/llms-full.txt)
+
+### Installation
 
 ```sh
 pnpm add @react-native-motion-kit/text-motion react-native-reanimated react-native-worklets
 ```
 
-The MVP peer dependency minimums are:
+The peer minimums are Reanimated `4.0.0` and Worklets `0.5.0`. These minimums are not a complete native compatibility matrix. Follow the [installation guide](https://react-native-text-motion.pages.dev/guide/getting-started/installation.html) and [official Reanimated setup](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started/) for your React Native or Expo version. Reanimated 4 requires the New Architecture.
 
-- `react-native-reanimated`: `>=4.0.0`
-- `react-native-worklets`: `>=0.5.0`
+### Basic Usage
 
-Follow the official Reanimated and Worklets setup for your app, including the New Architecture requirements of Reanimated 4.
-
-## Quick Start
-
-Use a preset when you want a good default with very little code:
+Create a component from a preset and pass the text you want to animate:
 
 ```tsx
 import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
 
+// Create the reusable component outside render.
 const HeroReveal = editorialRise().component();
 
 export function HeroTitle() {
@@ -49,11 +61,7 @@ export function HeroTitle() {
 }
 ```
 
-`editorialRise()` is a recipe factory. Internally it splits the sentence into words, renders with `nativeText()`, starts near the center, and combines `rise`, `fade`, and subtle `scale`.
-
-## Custom Recipe
-
-Create a recipe when you want control:
+For custom motion, compose a recipe. `stagger()` uses seconds, and `.component()` requires a renderer selected with `.layout(...)`.
 
 ```tsx
 import {
@@ -61,637 +69,36 @@ import {
   fade,
   nativeText,
   rise,
-  scale,
   stagger,
   words,
 } from '@react-native-motion-kit/text-motion';
 
-const ProductHeadline = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
-  .timeline(stagger(0.032, { from: 'center' }))
-  .effect(rise({ y: 14 }).and(fade()).and(scale({ from: 0.98 })))
-  .motion({ kind: 'timing', options: { duration: 320 } })
-  .component();
-
-export function Header() {
-  return <ProductHeadline>Design motion that feels native</ProductHeadline>;
-}
-```
-
-The `0.032` value is seconds. Each visible token starts 32ms after the previous timing slot from the selected origin. The `duration` controls how long each token animates after its own delay begins.
-
-### Motion Options
-
-`.motion()` accepts a small discriminated config:
-
-```tsx
-.motion({ kind: 'timing', options: { duration: 320 } });
-.motion({ kind: 'spring', options: { damping: 14, stiffness: 160 } });
-```
-
-`timing` options follow Reanimated's `withTiming` config and `spring` options follow Reanimated's `withSpring` config. `reduceMotion` is intentionally not accepted there because text-motion controls reduced-motion behavior through the accessibility policy.
-
-Function-valued options, such as a custom `easing`, are compared by reference when text-motion decides whether an in-flight animation should keep playing or replay. Hoist or reuse the same function reference when a parent rerender should preserve progress; creating a new function is treated as a motion config change.
-
-`.motion()` configures playback owned by text-motion. It is used by mount autoplay and by `controls` commands. When a component receives raw `progress`, the app owns playback, so `.motion()` is not applied to that instance.
-
-## Presets
-
-Presets are composable recipe factories, not string names.
-
-```tsx
-import {
-  editorialRise,
-  gentleEmphasis,
-  softWave,
-} from '@react-native-motion-kit/text-motion/presets';
-
-const HeroReveal = editorialRise().component();
-const ProductCopy = softWave().component();
-const LabelEmphasis = gentleEmphasis().component();
-```
-
-- `editorialRise()` - title reveal that starts near the center and expands outward.
-- `softWave()` - product-copy reveal with sine-wave token delays.
-- `gentleEmphasis()` - small-label emphasis with fade and a midpoint pulse.
-
-## Splitters
-
-Splitters decide what a token is.
-
-Splitter factories validate their inputs, but the returned splitter is an opaque handle. Pass it to `defineTextMotion().split(...)`; descriptor fields such as `kind` and the internal `split` function are intentionally not part of the root user API.
-
-### Words
-
-```tsx
 const WordReveal = defineTextMotion()
   .split(words())
   .layout(nativeText())
-  .timeline(stagger(0.034))
-  .effect(fade().and(rise({ y: 10 })))
-  .component();
-```
-
-`words()` preserves spacing tokens for rendering, but whitespace does not consume timeline delay slots. In `"Words move as groups"`, the visible words animate as indices `0, 1, 2, 3`.
-
-Explicit newline characters are preserved for layout too. For example,
-`"First line\nSecond line"` renders as two hard-broken visual lines with
-`nativeText()`, while the newline itself still does not consume a motion index.
-This is different from measuring automatic React Native line wrapping.
-
-`nativeText()` is meant for split motion in titles, labels, onboarding copy, and
-short product copy. Animated tokens use an animated container with an inner
-`Text`; generated token `testID` values identify that container, while text
-rendering props such as `allowFontScaling` are forwarded to the inner `Text`.
-It is not a full React Native `Text` drop-in, and very long grapheme animations
-remain a stress case rather than a stable performance promise.
-
-### Graphemes
-
-```tsx
-const GlyphReveal = defineTextMotion()
-  .split(graphemes())
-  .layout(nativeText())
-  .timeline(stagger(0.014, { from: 'center' }))
-  .effect(fade().and(scale({ from: 0.86 })))
-  .component();
-```
-
-`graphemes()` is character-level motion for user-perceived characters. It is safer than `text.split('')` for accents, Korean, emoji sequences, CJK, and RTL samples.
-
-### Lines
-
-```tsx
-const LineReveal = defineTextMotion()
-  .split(lines())
-  .layout(nativeText())
-  .timeline(stagger(0.12))
-  .effect(slide({ y: 16 }).and(fade()))
-  .component();
-```
-
-`lines()` is experimental and newline-only. It splits on explicit `\n` characters. It does not measure automatic React Native line wrapping.
-
-### Rendered Line Reveal
-
-Use `overlayText()` with `lineReveal()` when the motion unit should be the line React Native actually rendered after width, font, font scale, alignment, language shaping, and wrapping are applied.
-
-```tsx
-import {
-  defineTextMotion,
-  lineReveal,
-  overlayText,
-  stagger,
-} from '@react-native-motion-kit/text-motion';
-
-const HeroLines = defineTextMotion()
-  .layout(overlayText())
-  .timeline(stagger(0.08))
-  .effect(lineReveal({ y: 18 }))
-  .motion({ kind: 'timing', options: { duration: 420 } })
-  .component();
-
-export function HeroTitle() {
-  return <HeroLines>Design motion that feels native</HeroLines>;
-}
-```
-
-Do not call `.split(...)` with `overlayText()`. `overlayText()` owns rendered lines after layout, while `nativeText()` consumes source word, grapheme, custom, or explicit newline tokens. TypeScript removes incompatible chains, and runtime capability checks reject unsafe JavaScript or casted combinations.
-
-Use rendered line reveal for responsive hero titles, marketing headings, onboarding headlines, and concise product copy where the final visual line breaks matter. Use `nativeText()` for word or grapheme motion. Use `lines()` only when authored `\n` breaks are the token boundary you want; it does not discover automatic wrapping.
-
-`overlayText()` also accepts the built-in style-transform effects (`fade`, `rise`, `slide`, `shake`, `scale`, and `pulse`) because they apply to each rendered line frame. `lineReveal()` is split internally: opacity belongs to the line frame, while the vertical reveal offset moves only the paragraph copy inside the line mask. This lets `lineReveal().and(scale())`, larger finite `scale()` values, and `pulse()` grow from the measured line center without being clipped by the renderer's own mask.
-
-Blank and whitespace-only rendered lines are preserved as visual spacing, but they do not consume a motion index. A title such as `"First\n\nSecond"` keeps the blank line while the two nonblank lines reveal in adjacent stagger slots.
-
-Relayout behavior is intentionally predictable:
-
-- identical line measurement does not replay
-- geometry-only relayout preserves the current run
-- a line topology change restarts component-owned playback once
-- external `progress` keeps the app-owned shared value and applies it to the new geometry
-- reduced motion renders final readable source text without measurement or playback overlays
-- malformed or unsupported native geometry falls back to readable final source text
-
-`overlayText()` creates one full paragraph copy per moving rendered line. Performance scales with visible rendered lines, not source word or grapheme count. Treat it as a title, heading, and product-copy renderer. Do not publish measured performance claims until the same case family has iOS and Android evidence.
-
-Before valid line geometry exists, the source paragraph remains responsible for layout. When the initial scale is exactly `1`, the pending source keeps the same combined initial opacity and transform users already see from other renderers. When the initial scale is not exactly `1`, the pending source is visually hidden until geometry is valid so the first visible scaled frame uses the measured line center.
-
-The renderer fixes self-clipping caused by its own line mask. It does not reserve extra layout space for large transforms and it cannot bypass clipping from a parent or ancestor with `overflow: hidden`; treat those as normal React Native transform limitations.
-
-### Custom
-
-```tsx
-const CustomReveal = defineTextMotion()
-  .split(custom((input) => input.match(/\S+|\s+/g) ?? []))
-  .layout(nativeText())
-  .timeline(stagger(0.028, { from: 'edges' }))
-  .effect(rise({ y: 8 }).and(fade()))
-  .component();
-```
-
-Use `custom()` for product-specific token boundaries such as hashtags, mentions, prices, punctuation groups, or domain-specific terms. A custom splitter may return strings or token objects:
-
-```tsx
-custom((input) => [
-  {
-    text: input,
-    metadata: { kind: 'headline' },
-    sourceRange: { start: 0, end: input.length },
-  },
-]);
-```
-
-If your custom splitter returns plain strings, `text-motion` finds each token in the original text from left to right. This is enough for common splitters such as `input.match(...)`.
-
-If your splitter returns tokens out of order, repeats the same text intentionally, or needs exact original positions, return token objects with `sourceRange` instead of plain strings.
-
-## Timelines
-
-Timelines calculate per-token start delays in seconds.
-
-```tsx
-stagger(0.04);
-stagger(0.04, { from: 'center' });
-stagger(0.04, { from: 'end' });
-stagger(0.04, { from: 'edges' });
-wave({ amplitude: 0.06, wavelength: 5 });
-sequence(stagger(0.02), wave({ amplitude: 0.04, wavelength: 4 }));
-parallel(stagger(0.08), wave({ amplitude: 0.05, wavelength: 3 }));
-```
-
-- `stagger(step)` - fixed delay step from an origin.
-- `wave()` - sine-wave delay pattern across token indices.
-- `sequence()` - adds multiple timeline delays together.
-- `parallel()` - uses the earliest delay from multiple timelines.
-
-Timeline factories validate their input options, but the returned timeline is an opaque handle. Pass it to `.timeline(...)`; descriptor fields such as `delayFor`, `name`, and `options` are intentionally not part of the root user API.
-
-Numeric timeline inputs must be finite. `stagger()` accepts a non-negative step, `wave()` accepts a non-negative amplitude, and `wave()` requires `wavelength > 0`.
-
-## Effects
-
-Effects describe how each token moves.
-
-```tsx
-fade();
-rise({ y: 14 });
-slide({ x: -12, y: 8 });
-scale({ from: 0.92, to: 1 });
-pulse({ scale: 1.08 });
-shake({ x: 6 });
-lineReveal({ y: 18 });
-typewriter();
-```
-
-Effects compose with `.and(...)`:
-
-```tsx
-rise({ y: 14 }).and(fade()).and(scale({ from: 0.98 }));
-```
-
-`pulse()` is a midpoint emphasis effect. It scales each token up near the middle of its animation and returns to the composed final scale. Use `scale()` when the text should start or end at a different size.
-
-Effect factories validate their input options, but the returned effect is an opaque handle. Compose effects with `.and(...)`; descriptor fields such as `name`, `options`, and `requiredCapabilities` are intentionally hidden from the root user API.
-
-Numeric built-in effect inputs must be finite numbers. Negative offsets are allowed where the option represents direction, such as `rise({ y })`, `slide({ x, y })`, and `shake({ x })`.
-
-`lineReveal()` requires the `line-mask` capability from `overlayText()`. It is not compatible with `nativeText()`.
-
-## Typewriter
-
-Use `typewriter()` for short greetings, onboarding copy, or labels that should appear one character at a time while keeping the completed phrase's space and line breaks in place. It is an effect imported from the package root, with no options; it is not a preset or a separate renderer.
-
-```tsx
-import {
-  defineTextMotion,
-  graphemes,
-  nativeText,
-  parentLabelPolicy,
-  stagger,
-  typewriter,
-  useTextMotionControls,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-
-const TypewriterText = defineTextMotion()
-  .split(graphemes())
-  .layout(nativeText())
   .timeline(stagger(0.04))
-  .effect(typewriter())
-  .motion({ kind: 'timing', options: { duration: 0 } })
-  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
-  .component();
-
-export function Greeting() {
-  const controls = useTextMotionControls();
-
-  return (
-    <>
-      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
-      <Button title="Replay" onPress={controls.replay} />
-    </>
-  );
-}
-```
-
-`stagger(0.04)` uses seconds, so visible characters start 40ms apart. The first character appears on the first playback update; whitespace and hard newlines keep their layout space without taking a delay slot, and punctuation takes a slot like any other character. Actual display times follow device frames. `duration: 0` makes the default reveal instant for each character in autoplay and controls-driven playback.
-
-Use the existing controls to replay, reset, or stop typing. `stop()` keeps the current state; `play()` afterward does not promise an exact continuation of the remaining typing schedule. To type a different phrase completely from the start, remount it with a new React `key`. Appending text is not a streaming API.
-
-For external playback, pass `progress={progress}` instead of `controls`. `.motion()` is ignored for that instance. **Progress describes the effect timeline, not the percentage of characters shown:** with ten visible characters and `stagger(0.05)`, all characters are shown once progress exceeds about `0.310345`, so `0.5` does not mean five characters. Decreasing progress can hide characters again. Use a linear external timing curve when you want evenly spaced threshold crossings in time.
-
-`typewriter()` can combine with `rise()` or `fade()`. Each character stays hidden until its local progress becomes positive, then the other effects continue normally; adding `fade()` intentionally makes its appearance gradual. The visibility rule works in either composition order. For a visible movement after each character appears, use a nonzero `.motion()` duration.
-
-This effect supports `nativeText()` only. It preserves that renderer's completed token layout; it does not provide exact single-`Text` shaping or line wrapping, a cursor, growing/deleting the underlying string, or streaming. The built-in grapheme fallback now keeps decomposed Hangul syllable sequences such as `한` together without normalizing the source, but it does not implement all Unicode grapheme rules. Complex scripts can still need an app-provided `Intl.Segmenter` or `custom()` splitter. Measure long text and many rows on your target devices before treating them as supported workloads.
-
-### Choosing the reveal and motion
-
-`typewriter()` does not choose the splitter or own typing speed. Keep `graphemes()` for character-by-character motion, or use `words()` when whole words should appear together. The timeline owns the start delays, and `.motion()` owns each token's optional motion in autoplay or controls mode. A different stagger origin or `wave()` follows that timeline's order rather than promising start-to-end typing.
-
-For example, this effect and motion pair makes each character appear and then rise for 120ms:
-
-```tsx
-.effect(typewriter().and(rise({ y: 6 })))
-.motion({ kind: 'timing', options: { duration: 120 } })
-```
-
-Combining with `fade()` preserves its opacity animation, while Typewriter still prevents characters from showing before they start. Adding `typewriter()` twice does not create a second reveal or another playback clock.
-
-With external `progress`, `0` hides the animated characters and `1` renders the final state. The existing mapping uses a token span of `1.0`: for a token delay `d` and the largest delay `D`, local progress is `clamp(progress * (D + 1) - d, 0, 1)`. A character is shown when that local value is greater than zero. There is no remembered maximum progress, so moving backward past a character's start hides it again. A spring overshooting `1` alone does not hide an already started character; it must move back across the character's start threshold.
-
-The example's `parentLabelPolicy({ reducedMotion: 'final-state' })` keeps the complete sentence readable when reduced motion is enabled, including an externally controlled instance whose progress is still `0`. The parent exposes the full phrase once to screen readers and the decorative character nodes remain hidden; no per-character announcements are emitted.
-
-## Native Renderer Contract
-
-`nativeText()` is the stable MVP renderer. Animated tokens use an animated `View` container with an inner `Text` so transform effects such as `rise()`, `slide()`, `scale()`, and `pulse()` are visible in React Native. Static tokens still render as plain `Text`.
-
-`nativeText()` returns an opaque renderer handle for `.layout(...)`. Descriptor fields such as `kind`, `capabilities`, and the implementation `Component` are intentionally hidden from the root user API.
-
-This is not a full React Native `Text` drop-in. It favors reliable per-token transforms over exact platform text layout. Use `overlayText()` when you need motion by actual rendered line. Full RN line-to-token mapping remains deferred.
-
-Components created with `nativeText()` intentionally support a narrow prop surface:
-
-- `style`
-- `testID`
-- `nativeID`
-- `allowFontScaling`
-- `maxFontSizeMultiplier`
-- `controls`
-- `progress`
-- `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`, `accessibilityState`, `accessibilityValue`, `accessibilityActions`, `accessibilityLanguage`, and `onAccessibilityAction`
-
-Layout and interaction props that require a single native text node are not part of the stable MVP contract. This includes `numberOfLines`, `ellipsizeMode`, `lineBreakMode`, `onTextLayout`, `selectable`, and text `onPress` handlers.
-
-Use `nativeText({ testIDPrefix: 'word' })` when tests need stable per-token `testID` values. Generated token `testID` values identify the animated token container, while text rendering props such as `allowFontScaling` and `maxFontSizeMultiplier` are forwarded to the inner `Text`:
-
-```tsx
-const TestableReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText({ testIDPrefix: 'word' }))
-  .effect(fade())
+  .effect(fade().and(rise({ y: 12 })))
   .component();
 ```
 
-### Renderer Performance Thresholds
+Continue with the [recipe API](https://react-native-text-motion.pages.dev/api/recipe.html), [renderers](https://react-native-text-motion.pages.dev/api/renderers.html), and [playback guide](https://react-native-text-motion.pages.dev/guide/usage/playback.html). Use either `controls` or external `progress` on an instance; they cannot be combined.
 
-`nativeText()` is the default renderer for high-value UI text: titles, labels, onboarding copy, product copy, and short strings where token motion is easy to see. It is not designed to make long paragraphs or hundreds of grapheme tokens free.
+## Scope
 
-The example app has a `Playback -> Renderer Performance` probe for checking the practical boundary. It includes word, grapheme, shared-row, replay, and progress cases. Use it with a real FPS source such as React Native Perf Monitor, Flashlight, Xcode Instruments, or Android Studio profiler.
+Designed for short UI text, this library does not replace every native `Text` feature. `nativeText()` animates source tokens; `overlayText()` animates actual rendered lines and must not use `.split(...)`. The `lines()` splitter handles explicit `\n` characters only.
 
-Use these terms when recording results:
+Measure long paragraphs and many animated rows on target devices. Browser demos are not native performance evidence. See [performance guidance](https://react-native-text-motion.pages.dev/guide/usage/performance.html) and [accessibility](https://react-native-text-motion.pages.dev/guide/usage/accessibility.html).
 
-- `measured`: the same case family has iOS and Android evidence.
-- `provisional`: only one platform, simulator-only, emulator-only, or dev-mode-only evidence exists.
-- `unknown`: the case family was not measured.
+## Project direction
 
-The decision rule is intentionally conservative. If normal title, label, and product-copy workloads are smooth, keep `nativeText()` as the default renderer and document any grapheme-heavy boundary as guidance. If normal workloads jank, open a renderer optimization plan before adding more effects. If only stress grapheme cases fail, document the stress boundary instead of treating that as proof that the default renderer is wrong.
+Discuss priorities and feature ideas in [Project direction & roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10).
 
-## Playback Lifecycle
+Read the [project context and roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/ROADMAP.md) for priorities and design boundaries before extending the library.
 
-The default lifecycle is automatic and input-driven.
+## Contributing
 
-- Initial mount autoplays animated visible tokens from their initial style to their target style.
-- Parent rerenders with the same text and same recipe preserve in-flight progress.
-- Text changes replay the affected token animation, even when the token shape is the same.
-- Effect, timeline, or motion config changes reset affected animated tokens and autoplay with the updated inputs.
-- Whitespace/static tokens preserve layout text but do not animate or consume motion index.
-- `parentLabelPolicy({ reducedMotion: 'final-state' })` keeps reduced-motion users at the final style without flashing through the initial animated state.
-
-Text changes are enter-only in the MVP. The old text is not kept around for an exit animation, crossfade, or token diff. If a component has `controls`, later commands target the currently rendered text. If a component has `progress`, the app-owned shared value decides the new text's visual state; for example, a new phrase rendered while `progress.value` is `0.5` appears at the corresponding mid-state instead of starting autoplay.
-
-The example app may remount its demo player to make repeated inspection convenient. Treat that as demo UI behavior, not the recommended app API.
-
-### Playback Controls
-
-Use `controls` when an event should tell a text motion component to play, replay, reset, or stop.
-
-Common examples:
-
-- a headline reveals after the user taps a button
-- onboarding copy advances with the current step
-- a screen title replays when a screen receives focus
-- a label appears only after a form field becomes valid
-- a hero title and subtitle replay together from one control
-
-In these cases, the app owns the event, but the text component still owns playback execution. The component uses its recipe, timeline, effects, and `.motion()` config.
-
-```tsx
-import {
-  defineTextMotion,
-  fade,
-  nativeText,
-  rise,
-  stagger,
-  useTextMotionControls,
-  words,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-
-const ReplayableReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
-  .timeline(stagger(0.04))
-  .effect(rise({ y: 12 }).and(fade()))
-  .motion({ kind: 'timing', options: { duration: 420 } })
-  .component();
-
-export function Headline() {
-  const controls = useTextMotionControls();
-
-  return (
-    <>
-      <ReplayableReveal controls={controls}>
-        Replay without remounting
-      </ReplayableReveal>
-
-      <Button title="Replay" onPress={controls.replay} />
-      <Button title="Reset" onPress={controls.reset} />
-    </>
-  );
-}
-```
-
-`controls` is a command channel, not a progress value:
-
-- `play()` moves from the current progress toward the final state.
-- `replay()` resets to the initial state and plays again with timeline delays.
-- `reset()` cancels playback and returns to the initial state.
-- `stop()` cancels playback and keeps the current visual progress.
-
-One controls object may be passed to multiple text motion components. Commands broadcast to every attached component, and each component executes the command with its own recipe.
-
-`controls` and `progress` cannot be used together. Use `controls` for discrete events such as buttons and screen focus. Use `progress` when text should follow a continuous value.
-
-Text Motion intentionally does not provide a context/provider playback API or a public component ref API. Pass controls explicitly with `controls={controls}` so the connection is visible in JSX.
-
-Performance note: controls are designed for short UI text. For a title, label, or short product sentence, playback work should stay small and predictable. For long paragraphs, dense lists, or grapheme-split text with many characters, check the `Renderer Performance` probe and measure on your target device before using it in production.
-
-The renderer internals may change as larger workloads become important, so treat the example stress case as a profiling aid rather than a public promise about how controls are implemented.
-
-### Raw Progress
-
-Use `progress` when text motion should follow a raw value the app already owns.
-
-Common examples:
-
-- text follows a scroll or gesture shared value
-- several UI elements need to move from the same shared progress value
-- a custom Reanimated sequence should drive the phrase from `0` to `1`
-
-In these cases, the text component should not decide when to start or how the value moves. The app owns a Reanimated shared value and passes it to the text component.
-
-```tsx
-import {
-  defineTextMotion,
-  fade,
-  nativeText,
-  rise,
-  stagger,
-  words,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
-
-const ProgressReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
-  .timeline(stagger(0.08))
-  .effect(rise({ y: 12 }).and(fade()))
-  .component();
-
-export function Headline() {
-  const progress = useSharedValue(0);
-
-  return (
-    <>
-      <ProgressReveal progress={progress}>
-        Progress drives the whole reveal
-      </ProgressReveal>
-
-      <Button
-        title="Play"
-        onPress={() => {
-          progress.value = withTiming(1, { duration: 720 });
-        }}
-      />
-    </>
-  );
-}
-```
-
-`progress` is normalized whole-text progress:
-
-- `0` renders the initial token styles.
-- `1` renders every animated token at its final style.
-- Values outside `0..1` are clamped.
-- Non-finite values are treated as `0`.
-
-Think of `progress` as the progress of the whole phrase, not of one word. If you use `stagger(0.08)`, the first word can already be finished while the later words are still catching up. The renderer maps the global shared value to each visible token's local progress, so `stagger()`, `wave()`, `sequence()`, and `parallel()` keep their timing shape in controlled mode. Whitespace is still rendered but does not consume a motion index.
-
-When `progress` is provided, the app owns playback and `.motion()` does not start internal autoplay. Choose the playback curve where you update the shared value:
-
-```tsx
-progress.value = withTiming(1, { duration: 720 });
-progress.value = withSpring(1);
-progress.value = 0;
-```
-
-If this rendered component receives `progress`, `.motion()` is not applied to that instance. Add `.motion()` only for autoplay or controls-driven versions of the same recipe.
-
-Important limitation: controlled mode currently uses a fixed token timeline span of `1.0` inside the whole-text progress mapping. In practice that means timeline delays shape when each token starts, while your `withTiming` or `withSpring` call shapes how fast the entire phrase moves from `0` to `1`. If a future version needs per-token span or duration controls in controlled mode, that should be added as an explicit API instead of silently borrowing `.motion()` duration.
-
-First-class `pause`, `seek`, `reverse`, screen focus, in-view, scroll, and gesture drivers remain deferred.
-
-## Accessibility
-
-The default renderer uses a parent accessible label and hides decorative animated token nodes, so screen readers read the phrase once instead of token by token.
-
-```tsx
-import { parentLabelPolicy } from '@react-native-motion-kit/text-motion';
-
-const ReducedReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
-  .effect(rise().and(fade()))
-  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
-  .component();
-```
-
-## React Native Text Segmentation
-
-React Native/Hermes does not guarantee `Intl.Segmenter` in every runtime. The built-in splitters detect it first and use it when available. When it is missing, `graphemes()` and `words()` fall back to a small internal tokenizer so animations do not crash at app startup.
-
-The grapheme fallback keeps decomposed Hangul syllable sequences such as `한` together, including syllable boundaries involving precomposed Hangul and Jamo, without normalizing or rewriting the source text. It does not implement every Unicode grapheme rule: some Indic conjuncts such as `क्ष` can still split. Per-token rendering also does not guarantee the shaping or ligatures of a single native `Text`.
-
-The fallback is designed for resilient UI motion, not full ICU-level locale segmentation. Apps that need exact locale-aware word boundaries, especially for scripts with complex word breaking, should load an `Intl.Segmenter` polyfill such as `@formatjs/intl-segmenter` in the app entrypoint before rendering text motion components, or pass a `custom()` splitter for product-specific tokenization.
-
-## Stable MVP
-
-- `defineTextMotion()`
-- `graphemes()`, `words()`, `custom()`
-- experimental newline-only `lines()`
-- `nativeText()`, `overlayText()`
-- `stagger()`, `sequence()`, `parallel()`, `wave()`
-- `fade()`, `rise()`, `slide()`, `scale()`, `pulse()`, `shake()`, `lineReveal()`, `typewriter()`
-- `useTextMotionControls()` with explicit `controls` prop for event-driven play/replay/reset/stop
-- controlled `progress` via external Reanimated shared values
-- parent-label accessibility policy with hidden animated token nodes
-- `/presets` subpath recipe factories
-
-Custom effect factories and renderer capability factories are intentionally not exported from the root MVP API. `nativeText()` only implements the built-in native text effects listed above. A stable renderer-extension SDK will be designed before those helpers become public.
-
-## Deferred
-
-These are intentionally not stable exports in the MVP:
-
-- custom effect factory API
-- renderer capability factory API
-- `wipe`
-- `scramble`
-- Skia renderer or Skia-only effects
-- playback APIs such as `pause`, `seek`, or `reverse`
-- first-class screen focus, in-view, scroll, or gesture drivers
-- RN-rendered line-to-token mapping
-
-Skia remains an optional future package boundary, not a dependency of this core package.
-
-Context/provider playback wiring and public component ref playback are not deferred features. They are intentionally outside this package's API shape because they hide ownership and make remount/lifecycle behavior easier to misuse. Use explicit `controls={controls}` wiring when one or more text components should respond to event-driven playback commands.
-
-## Scope & Roadmap
-
-Text Motion is a split text motion engine, not a generic animation package. The core question for this package is:
-
-```txt
-Does this feature improve something specific to split text: splitting, layout mapping, token timing, text effects, renderer capability, accessibility, or token-level playback?
-```
-
-If the answer is yes, it may belong in `@react-native-motion-kit/text-motion`.
-
-Core text-motion work should stay focused on:
-
-- splitters, token metadata, and layout-aware text motion
-- native text renderer reliability and performance
-- timeline, effect, motion, controls, and progress composition for split tokens
-- accessibility behavior for decorative token animation
-- presets that help users ship common title, label, and product-copy motion faster
-
-Advanced text effects can be considered when they still depend on text tokens or text layout:
-
-- scramble, wipe, and highlight sweep effects
-- word-in-line effects and RN-rendered line-to-token mapping when source range policies are stable enough to document
-- text-change transitions where old and new token sets need a clear playback policy
-
-Renderer-specific effects should stay behind renderer capability boundaries:
-
-- blur, glow, shader text, masks, and glyph distortion are better candidates for an optional Skia renderer package than the core native text renderer
-- native-only effects should not silently accept renderer-specific options they cannot support
-
-Out-of-scope features are likely better served by separate package candidates when they solve a different problem:
-
-- number count-up, odometer, currency, percentage, timer, and delta animations are value-formatting problems, not split-text layout problems
-- generic `View` animation, scene animation, and Lottie-style workflows belong outside this package
-- a separate value-motion package could share the Motion Kit philosophy without expanding the text-motion API surface
-
-The decision rule is intentionally conservative: add a feature here only when it improves text-specific production work without making the common recipe API harder to understand. Otherwise, keep it deferred, renderer-specific, or a separate package.
-
-## Should You Use It?
-
-This package is intentionally small in the MVP. It is best suited for short, high-value UI text where split motion improves the experience without taking over layout.
-
-Use it today for:
-
-- hero titles, section titles, short labels, onboarding copy, and product descriptions
-- word or grapheme entrance motion with `fade`, `rise`, `slide`, `scale`, `pulse`, or `shake`
-- character-by-character Typewriter reveals that keep the completed phrase's layout
-- reusable recipe components created from presets or `defineTextMotion()`
-- event-driven replay/reset/stop controls without remounting the component
-- raw progress with an external Reanimated shared value
-- rendered-line reveal for responsive hero titles, headings, and concise product copy
-- apps that already use Reanimated 4 and can follow its Worklets setup
-- accessible decorative text motion where the full phrase should remain readable once
-
-Wait for a later version if your feature depends on:
-
-- playback APIs such as `pause`, `seek`, or `reverse`
-- scroll progress, gesture progress, or viewport/in-view triggers as first-class drivers
-- per-token line measurement or mixed word-in-line animation
-- Skia-only visual effects such as blur, glow, shaders, masks, or glyph distortion
-- rich nested text, inline links, selectable text, or exact native `Text` behavior
-- long paragraphs or many animated rows without measuring performance in your target app
-
-The next product focus is verifying line renderer performance and platform behavior, then deciding whether state-transition props, `pause`/`seek`/`reverse`, screen focus helpers, in-view helpers, scroll/gesture drivers, word-in-line effects, or Skia renderer candidates deserve first-class APIs. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.
-
-## Development
-
-```sh
-corepack pnpm install
-corepack pnpm run typecheck
-corepack pnpm run test
-corepack pnpm run build
-```
+[Contributing guide and development setup](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/CONTRIBUTING.md)
 
 ## License
 
-MIT
+[MIT](./LICENSE)

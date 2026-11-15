@@ -1,0 +1,44 @@
+# AI
+
+레시피, 프리셋, 재생 제어, 문제 해결을 AI에게 물어볼 때 Text Motion 문서를 함께 제공하세요.
+
+## llms.txt
+
+이 사이트는 AI 도구를 위한 두 가지 파일을 제공합니다.
+
+- [llms.txt](https://react-native-text-motion.pages.dev/ko/llms.txt): 개별 문서 링크를 모은 구조화된 인덱스입니다. AI가 필요한 페이지를 직접 가져올 수 있을 때 사용하면 컨텍스트를 줄일 수 있습니다.
+- [llms-full.txt](https://react-native-text-motion.pages.dev/ko/llms-full.txt): 한국어 문서 전체를 하나로 합친 파일입니다. 여러 기능에 걸친 질문이나 큰 리팩터링에 적합하지만 컨텍스트를 더 많이 사용합니다.
+
+작업에 맞는 URL을 복사하세요.
+
+```txt
+https://react-native-text-motion.pages.dev/ko/llms.txt
+https://react-native-text-motion.pages.dev/ko/llms-full.txt
+```
+
+## Markdown 문서
+
+모든 문서 페이지는 Markdown 버전도 제공합니다. 특정 기능 하나만 질문할 때는 관련 페이지만 전달하세요.
+
+```txt
+https://react-native-text-motion.pages.dev/ko/guide/getting-started/quick-start.md
+https://react-native-text-motion.pages.dev/ko/guide/usage/recipes.md
+https://react-native-text-motion.pages.dev/ko/guide/usage/playback.md
+```
+
+AI가 URL을 직접 읽을 수 없다면 파일을 열어 내용을 붙여 넣거나 컨텍스트로 첨부하세요.
+
+## 프롬프트 예시
+
+```txt
+https://react-native-text-motion.pages.dev/ko/guide/getting-started/quick-start.md를 읽어 주세요.
+defineTextMotion(), words(), nativeText(), stagger(), fade().and(rise())를 사용해
+React Native 단어 리빌을 만들어 주세요. import와 접근성을 고려한 사용 예시를 포함하고,
+문서에 있는 API를 사용해 시간 단위를 설명해 주세요.
+```
+
+## 라이브러리 개발 맥락
+
+Text Motion 자체를 수정할 때는 [로드맵 안내](./roadmap.md)에서 저장소의 프로젝트 맥락과 상세 계획으로 이동할 수 있습니다. 현재 우선순위, 설계 범위와 보류 후보를 기록한 문서이며, 보류 항목은 출시 약속이 아닙니다.
+
+진행 중인 제안과 우선순위를 정한 이유는 [로드맵 Discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10)에서도 확인할 수 있습니다.
