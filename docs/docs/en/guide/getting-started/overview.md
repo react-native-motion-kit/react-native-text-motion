@@ -46,3 +46,5 @@ The intended workloads are short titles, headings, labels, onboarding copy, and 
 The current public API does not include custom effect factories, a renderer-extension SDK, Skia effects, `pause`/`seek`/`reverse`, or built-in scroll, gesture, screen-focus, and in-view drivers. Apps can connect their own events through `controls` and continuous shared values through `progress`. Text changes are enter-only; the library does not retain old text for exit animation or provide a streaming-text API.
 
 Continue with [installation](./installation.md), then create your first component in the [quick start](./quick-start.mdx).
+
+For the library's development priorities and design boundaries, see the [roadmap](./roadmap.md).
