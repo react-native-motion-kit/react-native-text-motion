@@ -49,6 +49,9 @@ Hosting and deployment configuration live outside the Rspress build command.
   a production build; do not maintain a second hand-written API dump.
 - Keep repository and package READMEs focused on installation, a concise
   quickstart, and links to the production documentation, examples, and AI guide.
+- Preserve library priorities and design boundaries in `ROADMAP.md` and
+  `ROADMAP.ko.md` at the repository root. Keep README and AI-guide links to that
+  context when simplifying documentation entry points.
 - Link to official setup instructions for Reanimated and Worklets; the package's
   peer minimums are not a complete native dependency compatibility matrix.
 - Inline demos run the actual library using an isolated React Native Web bundle.

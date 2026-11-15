@@ -89,6 +89,10 @@ Designed for short UI text, this library does not replace every native `Text` fe
 
 Measure long paragraphs and many animated rows on target devices. Browser demos are not native performance evidence. See [performance guidance](https://react-native-text-motion.pages.dev/guide/usage/performance.html) and [accessibility](https://react-native-text-motion.pages.dev/guide/usage/accessibility.html).
 
+## Project direction
+
+Read the [project context and roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/ROADMAP.md) for priorities and design boundaries before extending the library.
+
 ## Contributing
 
 [Contributing guide and development setup](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/CONTRIBUTING.md)

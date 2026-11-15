@@ -89,6 +89,10 @@ const WordReveal = defineTextMotion()
 
 긴 문단이나 많은 애니메이션 행은 대상 기기에서 측정하세요. 브라우저 예제는 네이티브 성능 측정 자료가 아닙니다. [성능 안내](https://react-native-text-motion.pages.dev/ko/guide/usage/performance.html)와 [접근성 안내](https://react-native-text-motion.pages.dev/ko/guide/usage/accessibility.html)를 참고하세요.
 
+## 프로젝트 방향
+
+현재 우선순위, 보류 중인 API 후보, 의도적으로 제외한 설계는 [프로젝트 맥락과 로드맵](./ROADMAP.ko.md)에 보존합니다.
+
 ## 개발
 
 이 저장소는 라이브러리, Expo 예제 앱, 한영 Rspress 문서를 포함하는 pnpm workspace입니다.

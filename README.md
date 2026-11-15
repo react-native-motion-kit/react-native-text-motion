@@ -89,6 +89,10 @@ Designed for short UI text, this library does not replace every native `Text` fe
 
 Measure long paragraphs and many animated rows on target devices. Browser demos are not native performance evidence. See [performance guidance](https://react-native-text-motion.pages.dev/guide/usage/performance.html) and [accessibility](https://react-native-text-motion.pages.dev/guide/usage/accessibility.html).
 
+## Project direction
+
+Current priorities, deferred API candidates, and deliberate design boundaries are preserved in the [project context and roadmap](./ROADMAP.md).
+
 ## Development
 
 This pnpm workspace contains the library, Expo example app, and bilingual Rspress documentation.
