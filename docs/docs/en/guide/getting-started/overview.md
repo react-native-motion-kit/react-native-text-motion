@@ -1,3 +1,7 @@
+---
+description: "Compare Text Motion presets and recipes for word, character, and rendered-line animation, including playback inputs, accessibility, and API scope."
+---
+
 # Overview
 
 `@react-native-motion-kit/text-motion` creates reusable animated text components for React Native. Compose text splitting, rendering, timing, effects, and accessibility in a recipe, then render the result as a component.

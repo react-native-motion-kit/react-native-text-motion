@@ -1,3 +1,7 @@
+---
+description: "Follow Text Motion's renderer performance priorities, API scope, design boundaries, deferred candidates, and project roadmap discussion."
+---
+
 # Roadmap
 
 Join the [project direction and roadmap discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10) to propose features, compare priorities and discuss design decisions.

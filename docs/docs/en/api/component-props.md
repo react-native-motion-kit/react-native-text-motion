@@ -1,3 +1,7 @@
+---
+description: "TextMotionComponent props for text styling, controls, shared progress, accessibility, and lifecycle behavior in React Native."
+---
+
 # Component Props
 
 Calling a recipe's `.component()` returns a `TextMotionComponent`. Its props are `TextMotionComponentProps`, shared by both built-in renderers.

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm run sources:generate && pnpm run demos:build && rspress build",
+    "build": "pnpm run sources:generate && pnpm run demos:build && rspress build && node scripts/check-seo.mjs",
     "check": "pnpm run sources:generate && node --test scripts/generate-demo-sources.test.mjs && node scripts/check-docs.mjs",
     "demos:build": "node scripts/build-demos.mjs",
     "dev": "pnpm run sources:generate && pnpm run demos:build && rspress dev",
