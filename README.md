@@ -284,6 +284,7 @@ Useful package-level docs:
 
 - [Package README](./packages/text-motion/README.md)
 - [Package Korean README](./packages/text-motion/README.ko.md)
+- [CI releases and first publication](./RELEASING.md)
 
 ## Should You Use It?
 

@@ -4,6 +4,7 @@
   "description": "Composable text motion primitives for React Native.",
   "scripts": {
     "build": "pnpm --filter @react-native-motion-kit/text-motion run build",
+    "changeset": "changeset",
     "clean": "pnpm --filter @react-native-motion-kit/text-motion run clean",
     "docs:build": "pnpm -C docs build",
     "docs:check": "pnpm -C docs check",
@@ -17,10 +18,13 @@
     "lint": "oxlint",
     "lint:ci": "oxlint --format=github",
     "lint:fix": "oxlint --fix",
+    "release:check": "node --test .github/scripts/release.test.mjs",
     "test": "pnpm --filter @react-native-motion-kit/text-motion run test",
     "typecheck": "pnpm -r --if-present run typecheck"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "commitlint": "^21.0.2",
     "lefthook": "^2.1.9",
@@ -35,5 +39,5 @@
   "engines": {
     "node": ">=24.13.0"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.26.0"
 }

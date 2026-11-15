@@ -1,0 +1,44 @@
+name: Release checks
+description: Validate the publish target, test it, and inspect its pnpm-packed contents
+
+inputs:
+  expected-version:
+    description: Optional package version confirmation for the first publication
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: Validated package version
+    value: ${{ steps.package.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate release metadata
+      id: package
+      shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.expected-version }}
+      run: node .github/scripts/release.mjs metadata
+
+    - name: Check and build
+      shell: bash
+      run: |
+        pnpm run release:check
+        pnpm run lint:ci
+        pnpm run format:check
+        pnpm run typecheck
+        pnpm run test --maxWorkers=2
+        pnpm run build
+
+    - name: Inspect the packed package
+      shell: bash
+      env:
+        RELEASE_VERSION: ${{ steps.package.outputs.version }}
+        PACKAGE_FILENAME: ${{ steps.package.outputs.filename }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/npm-release"
+        pnpm -C packages/text-motion pack --pack-destination "$RUNNER_TEMP/npm-release"
+        node .github/scripts/release.mjs audit "$RUNNER_TEMP/npm-release/$PACKAGE_FILENAME"
+        git diff --exit-code
