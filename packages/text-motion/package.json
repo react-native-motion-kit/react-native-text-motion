@@ -1,6 +1,6 @@
 {
   "name": "@react-native-motion-kit/text-motion",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "High-performance split text animations for React Native, powered by Reanimated and extensible renderers.",
   "keywords": [
     "android",
@@ -26,6 +26,7 @@
     "*.podspec",
     "react-native.config.js",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "!ios/build",
     "!android/build",
@@ -54,6 +55,7 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
