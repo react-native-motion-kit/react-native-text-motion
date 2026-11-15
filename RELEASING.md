@@ -1,44 +1,26 @@
 # Releasing Text Motion
 
-The release flow follows `react-native-gesture-image-viewer`: main runs setup,
-build and the Changesets action. Changesets maintains a version PR and publishes
-the merged version with package tags and a GitHub release. The existing CI
-workflow runs lint, formatting, types, tests and documentation builds.
+Releases use npm trusted publishing (OIDC). GitHub Actions runs setup, build and
+the Changesets action on `main`. The npm publisher trusts this exact repository,
+workflow and environment; no stored npm publishing token is required.
 
-Only `@react-native-motion-kit/text-motion` is public. The workspace root, example
-and documentation packages are private. Changesets invokes pinned pnpm 11.26.0,
-which converts `catalog:` dependencies to version ranges before publishing.
+The existing CI workflow owns lint, formatting, type checks, tests and
+documentation builds. Only `@react-native-motion-kit/text-motion` is public;
+the workspace root, example and docs packages remain private.
 
-## First release
+## Release flow
 
-The unpublished package uses `0.0.0` as its starting point. The initial minor
-changeset generates a version PR for **0.1.0**, including `CHANGELOG.md`.
-Do not write the changelog or run `publish` locally.
+1. Run `pnpm changeset` for changes to the public package and commit the generated
+   markdown file. Documentation and CI-only changes do not need a changeset.
+2. Merge the change into `main`. Changesets creates or updates
+   `chore(release): version packages` with the version and generated changelog.
+3. Merge that version PR. Release publishes through OIDC and creates the package
+   tag and GitHub release.
 
-1. Merge the release setup into `main`. Changesets opens
-   `chore(release): version packages` with version `0.1.0` and its changelog.
-2. Before merging that version PR, add a short-lived npm granular token as the
-   `NPM_TOKEN` secret on the GitHub `npm` environment. The token owner needs
-   package-creation permission in the `react-native-motion-kit` organization.
-   Grant Packages and scopes **Read and write** for `@react-native-motion-kit`
-   and enable **Bypass two-factor authentication** for this initial CI publish.
-   Organization-management access is not needed. Enter the value directly in
-   GitHub Secrets, never in a commit or chat.
-3. Merge the version PR. The same Release workflow publishes `0.1.0` from CI and
-   creates its tag and GitHub release.
-4. Configure the npm trusted publisher below, then remove the GitHub secret and
-   revoke the temporary token.
+For a retry, run **Actions → Release → Run workflow** on **main**. A run with no
+unpublished versions does not perform a registry publication.
 
-The registry authentication step maps `NODE_AUTH_TOKEN` to the npm registry.
-On pnpm 11.26.0, a successful OIDC exchange takes precedence; when trust is not
-configured yet, the publisher falls back to that temporary registry token.
-
-npm currently documents removal of direct granular-token publishing in January
-2027. Use this token only for the initial publication and move to OIDC immediately.
-
-## Trusted publishing
-
-In the npm package's **Settings → Trusted Publisher**, configure:
+## npm trusted publisher
 
 | Field | Value |
 | --- | --- |
@@ -49,28 +31,27 @@ In the npm package's **Settings → Trusted Publisher**, configure:
 | Environment | `npm` |
 | Allowed action | `npm publish` |
 
-Use the filename without `.github/workflows/`. Explicitly allow direct publishing
-if npm defaults to staging, and follow any activation deadline shown by npm.
-Subsequent releases use OIDC without a stored publishing token.
+The workflow uses direct publication after the version PR is merged. The
+stage-only permission requires a separate npm approval flow and does not authorize
+this workflow's `pnpm changeset publish` command.
 
-## Subsequent releases
+Keep package publishing access set to require 2FA and disallow bypass-2FA tokens;
+OIDC works with that policy. Do not restore the former publishing-token Secret or
+workflow environment variable.
 
-Run `pnpm changeset` for changes to the public package and commit the generated
-markdown file. After merging the change into `main`, Changesets creates or updates
-the version PR. Merging that PR publishes the new version and generated changelog.
-Documentation-only changes do not need a changeset.
+npm validates a new trust connection on its first real OIDC publication. Check
+and follow any validation deadline shown in the npm package settings. Until that
+publication succeeds, the saved configuration alone is not end-to-end evidence.
 
-For a retry, run **Actions → Release → Run workflow** on **main**. There are no
-separate bootstrap modes or custom package-check scripts.
+## GitHub and tooling
 
-## GitHub configuration
+The workflow requests `id-token: write`; the `npm` environment allows only `main`.
+Actions can create version PRs, and the organization allows the pinned Changesets
+v2 SHA `ae32849d5ba541f9ae29e40e22a623bc13562f51`.
 
-Actions must be allowed to create version PRs. The `npm` environment allows only
-`main`. The organization's action allow list includes the pinned Changesets v2
-SHA `ae32849d5ba541f9ae29e40e22a623bc13562f51`; the pnpm setup action retains its
-approved v4 pin and reads the pnpm version from the root `packageManager` field.
+Pinned pnpm 11.26.0 handles publication and OIDC natively. It also converts
+`catalog:` dependencies into version ranges before publishing. A separate npm CLI
+upgrade or token-based registry setup step is unnecessary.
 
 References: [Changesets automation](https://changesets.dev/guide/automating),
-[npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),
-[npm token settings](https://docs.npmjs.com/creating-and-viewing-access-tokens/),
-[npm token publishing policy](https://docs.npmjs.com/about-access-tokens/).
+[npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
