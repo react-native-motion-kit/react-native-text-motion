@@ -18,7 +18,6 @@
     "lint": "oxlint",
     "lint:ci": "oxlint --format=github",
     "lint:fix": "oxlint --fix",
-    "release:check": "node --test .github/scripts/release.test.mjs",
     "test": "pnpm --filter @react-native-motion-kit/text-motion run test",
     "typecheck": "pnpm -r --if-present run typecheck"
   },

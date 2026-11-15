@@ -34,9 +34,6 @@ jobs:
       - name: Typecheck files
         run: pnpm run typecheck
 
-      - name: Test release package checks
-        run: pnpm run release:check
-
   test:
     runs-on: ubuntu-latest
 
