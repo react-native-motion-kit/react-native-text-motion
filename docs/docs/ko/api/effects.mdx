@@ -1,0 +1,151 @@
+import { MotionDemo } from '../../../components/MotionDemo';
+
+# 효과
+
+라이브 미리보기는 React Native Web에서 실제 라이브러리를 실행합니다. 네이티브 줄 측정이 필요한 예제는 iOS 녹화로 표시합니다.
+
+효과는 각 모션 단위의 시각적 변화를 설명합니다. `@react-native-motion-kit/text-motion`에서 가져오고, 렌더러를 선택한 뒤 호환되는 효과를 `.effect(...)`에 전달하세요.
+
+## 팩터리와 기본값
+
+모든 옵션은 선택 사항이며 `typewriter()`는 옵션이 없습니다. 숫자 효과 입력은 모두 유한한 값이어야 합니다. 방향을 나타내는 오프셋은 음수도 가능합니다. 오프셋은 React Native 레이아웃 단위, 불투명도는 스칼라, 크기는 배율입니다.
+
+| 팩터리 | 옵션과 기본값 | 동작 | 렌더러 |
+| --- | --- | --- | --- |
+| `fade(options?)` | `from: 0`, `to: 1` | 불투명도를 `from`에서 `to`로 변경 | 둘 다 |
+| `rise(options?)` | `y: 12` | 아래쪽 `y` 오프셋에서 제자리로 이동 | 둘 다 |
+| `slide(options?)` | `x: 0`, `y: 12` | x/y 오프셋에서 제자리로 이동 | 둘 다 |
+| `scale(options?)` | `from: 0.96`, `to: 1` | 크기 배율 변경 | 둘 다 |
+| `pulse(options?)` | `scale: 1.04` | 중간 부근에서 커진 뒤 합성된 최종 크기로 복귀 | 둘 다 |
+| `shake(options?)` | `x: 4` | 가로 오프셋으로 흔들리는 듯한 진입 표현 | 둘 다 |
+| `lineReveal(options?)` | `y: 16`, `fromOpacity: 0` | 마스크 안에서 렌더링된 줄을 드러냄 | `overlayText()` |
+| `typewriter()` | 없음 | 로컬 progress가 양수가 될 때까지 토큰을 숨김 | `nativeText()` |
+
+`shake()`는 진입 오프셋이며 반복적인 진동을 만들지 않습니다. `pulse()`는 중간 지점의 강조 효과입니다. 시작·종료 크기를 바꾸려면 `scale()`을 사용하세요.
+
+루트에서 `FadeOptions`, `RiseOptions`, `SlideOptions`, `ScaleOptions`, `PulseOptions`, `ShakeOptions`, `LineRevealOptions`를 내보냅니다. 각 속성은 위 표의 옵션과 같습니다.
+
+## 효과별 미리보기
+
+각 데모에서 다시 재생해 시작 위치와 투명도, 크기 변화를 비교하세요.
+
+### `fade()`
+
+<MotionDemo id="fade" />
+
+### `rise()`
+
+<MotionDemo id="rise" />
+
+### `slide()`
+
+<MotionDemo id="slide" />
+
+### `scale()`
+
+<MotionDemo id="scale" />
+
+### `pulse()`
+
+<MotionDemo id="pulse" />
+
+### `shake()`
+
+<MotionDemo id="shake" />
+
+## `.and(...)`로 합성
+
+<MotionDemo id="compose" />
+
+```tsx
+import {
+  defineTextMotion,
+  fade,
+  nativeText,
+  rise,
+  scale,
+  stagger,
+  words,
+} from '@react-native-motion-kit/text-motion';
+
+const HeroTitle = defineTextMotion()
+  .split(words())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(rise({ y: 14 }).and(fade()).and(scale({ from: 0.98 })))
+  .component();
+
+export function Heading() {
+  return <HeroTitle>작은 움직임으로 전하는 선명한 메시지</HeroTitle>;
+}
+```
+
+`.and(...)`는 합성된 `TextMotionEffect`를 반환합니다. `.effect(...)`를 여러 번 호출해도 효과가 누적됩니다. 변형 오프셋은 더해지고 크기 배율은 곱해지며, 불투명도를 설정하는 효과는 합성 순서대로 적용됩니다. 레시피를 조합할 때는 불투명도 효과를 하나로 명확하게 정하는 편이 좋습니다.
+
+효과는 렌더러가 제공하는 기능과 호환되어야 합니다. `lineReveal()`은 `nativeText()`에서, `typewriter()`는 `overlayText()`에서 사용할 수 없습니다. TypeScript가 조합을 검사하며 런타임에서도 호환되지 않는 효과를 거부합니다.
+
+## `lineReveal()`
+
+<MotionDemo id="line-reveal" />
+
+```tsx
+import {
+  defineTextMotion,
+  lineReveal,
+  overlayText,
+  stagger,
+} from '@react-native-motion-kit/text-motion';
+
+const HeroLines = defineTextMotion()
+  .layout(overlayText())
+  .timeline(stagger(0.08))
+  .effect(lineReveal({ y: 18, fromOpacity: 0 }))
+  .motion({ kind: 'timing', options: { duration: 420 } })
+  .component();
+```
+
+분할기를 추가하지 마세요. 렌더러가 실제로 줄바꿈된 줄을 측정합니다. reveal 오프셋은 각 마스크 안의 문단 복사본을 움직이고, 불투명도는 줄 프레임에 적용됩니다. 함께 사용하는 `scale()`과 `pulse()`는 측정된 줄 프레임을 변형합니다. 배치·측정 동작은 [렌더러](./renderers.mdx)를 참고하세요.
+
+## `typewriter()`
+
+<MotionDemo id="typewriter" />
+
+완성된 배치를 유지하면서 문자를 드러낼 때 사용합니다. 분할기는 드러낼 단위, 타임라인은 시작 시점, `.motion()`은 시작 후의 움직임을 정합니다.
+
+```tsx
+import {
+  defineTextMotion,
+  graphemes,
+  nativeText,
+  parentLabelPolicy,
+  stagger,
+  typewriter,
+} from '@react-native-motion-kit/text-motion';
+
+const TypewriterText = defineTextMotion()
+  .split(graphemes())
+  .layout(nativeText())
+  .timeline(stagger(0.04))
+  .effect(typewriter())
+  .motion({ kind: 'timing', options: { duration: 0 } })
+  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
+  .component();
+
+export function Greeting() {
+  return <TypewriterText>안녕 세계! 👩🏽‍💻</TypewriterText>;
+}
+```
+
+처음부터 완성된 문장의 공간과 줄바꿈을 유지합니다. 보이는 그래핌은 40ms 간격의 지연 슬롯을 받으며, 공백과 명시적 줄바꿈은 공간을 유지하되 슬롯을 사용하지 않습니다. 문장 부호는 다른 보이는 문자처럼 슬롯을 사용합니다. 첫 문자는 첫 재생 갱신에서 나타나며, 실제 표시 시점은 기기 프레임을 따릅니다.
+
+`duration: 0`이면 자동 재생과 controls 모드에서 각 문자가 즉시 나타납니다. 나타난 뒤 움직이게 하려면 0보다 큰 지속 시간과 `typewriter().and(rise({ y: 6 }))` 같은 효과를 사용하세요. `fade()`를 합성하면 의도적으로 서서히 나타납니다. 표시 여부는 어느 합성 순서에서도 유지되며, `typewriter()`를 두 번 더해도 재생 시계가 추가되지 않습니다.
+
+다시 재생·초기화·정지는 [controls](../guide/usage/playback.mdx)를 사용하세요. `stop()`은 현재 상태를 유지하며, 이후 `play()`가 남은 타이핑 일정을 정확히 이어간다고 보장하지 않습니다. 새 문구를 처음부터 전부 타이핑하려면 새 React `key`로 다시 마운트하세요. 텍스트를 덧붙이는 동작은 스트리밍 API가 아닙니다.
+
+외부 `progress`에서 `0`은 애니메이션 문자를 숨기고 `1`은 최종 상태를 표시합니다. **progress는 표시된 문자 비율이 아니라 타임라인 진행률입니다.** 최대 지연을 `D`, 문자의 지연을 `d`라 하면 로컬 progress는 `clamp(progress × (D + 1) - d, 0, 1)`입니다. 이 값이 0보다 크면 문자가 보이며, 시작점을 지나 뒤로 되돌리면 다시 숨겨집니다. 외부 progress 모드에서는 `.motion()`을 무시합니다.
+
+이 효과는 원문 문자열을 늘리거나 지우지 않으며, 커서·단일 `Text`의 정확한 조형·스트리밍을 제공하지 않습니다. 짧은 UI 문구에 사용하고 큰 작업량은 직접 측정하세요.
+
+## 공개 범위
+
+효과 핸들은 `.and(...)`를 공개합니다. 내부 `name`, `options`, `requiredCapabilities` 필드는 공개 API가 아닙니다. 사용자 정의 효과 팩터리, `wipe`, `scramble`, Skia 효과는 현재 API에 포함되지 않습니다.

@@ -6,6 +6,8 @@ Korean documentation: [README.ko.md](./README.ko.md)
 
 Package documentation: [packages/text-motion/README.md](./packages/text-motion/README.md)
 
+Bilingual Rspress documentation: [development and build instructions](./docs/README.md). Run `pnpm docs:dev` to browse locally.
+
 This repository is a pnpm workspace for the `@react-native-motion-kit/text-motion` package and Expo example app.
 
 ## Package

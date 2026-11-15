@@ -58,5 +58,5 @@
   "globals": {
     "__DEV__": "readonly"
   },
-  "ignorePatterns": ["lib", "node_modules", "ios", "android", "dist"]
+  "ignorePatterns": ["lib", "node_modules", "ios", "android", "dist", "doc_build", ".rspress"]
 }

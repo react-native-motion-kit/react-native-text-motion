@@ -1,0 +1,32 @@
+[
+  {
+    "type": "file",
+    "name": "recipe",
+    "label": "레시피"
+  },
+  {
+    "type": "file",
+    "name": "splitters",
+    "label": "분할기"
+  },
+  {
+    "type": "file",
+    "name": "renderers",
+    "label": "렌더러"
+  },
+  {
+    "type": "file",
+    "name": "timelines",
+    "label": "타임라인"
+  },
+  {
+    "type": "file",
+    "name": "effects",
+    "label": "효과"
+  },
+  {
+    "type": "file",
+    "name": "component-props",
+    "label": "컴포넌트 Props"
+  }
+]

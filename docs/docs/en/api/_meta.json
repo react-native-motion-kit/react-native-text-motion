@@ -1,0 +1,32 @@
+[
+  {
+    "type": "file",
+    "name": "recipe",
+    "label": "Recipe"
+  },
+  {
+    "type": "file",
+    "name": "splitters",
+    "label": "Splitters"
+  },
+  {
+    "type": "file",
+    "name": "renderers",
+    "label": "Renderers"
+  },
+  {
+    "type": "file",
+    "name": "timelines",
+    "label": "Timelines"
+  },
+  {
+    "type": "file",
+    "name": "effects",
+    "label": "Effects"
+  },
+  {
+    "type": "file",
+    "name": "component-props",
+    "label": "Component Props"
+  }
+]
