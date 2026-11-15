@@ -19,6 +19,12 @@ In GitHub repository settings:
    access to maintain version PRs, package tags and GitHub releases.
 2. Create an environment named `npm`. If you configure deployment-branch rules,
    allow `main`. Existing environment protection rules still apply.
+3. The organization currently restricts third-party actions to pinned versions.
+   Its Actions allow list must include
+   `changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51` (v2.1.2).
+   The pnpm setup action retains the repository-approved v4 pin; it installs
+   pnpm 11.26.0 from the root `packageManager` field. Repository settings cannot
+   override the inherited organization policy.
 
 ## First publication from CI
 
