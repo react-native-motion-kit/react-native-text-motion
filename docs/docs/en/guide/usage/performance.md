@@ -1,3 +1,7 @@
+---
+description: "Profile Text Motion word, grapheme, and rendered-line workloads on iOS and Android, and record renderer, playback, layout, and device evidence."
+---
+
 # Performance
 
 Text Motion is intended for short, high-value UI text: titles, labels, onboarding copy, and concise product copy. Performance depends on the number of animated units, effects, simultaneous components, device, and playback mode. This documentation does not promise an FPS target or a universal safe character count.

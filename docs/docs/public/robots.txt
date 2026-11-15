@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /demos/
+
+Sitemap: https://react-native-text-motion.pages.dev/sitemap.xml

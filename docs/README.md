@@ -35,6 +35,33 @@ output directory, with the repository root as the working directory. The product
 Cloudflare Pages deployment uses `https://react-native-text-motion.pages.dev`.
 Hosting and deployment configuration live outside the Rspress build command.
 
+## Search metadata
+
+`siteOrigin` points to the production domain, and `route.cleanUrls` matches
+Cloudflare Pages URLs such as `/api/renderers` and `/ko/api/renderers`.
+Existing `.html` links continue to resolve on Cloudflare Pages.
+
+Each English and Korean page has its own localized `description` frontmatter.
+Rspress generates page titles, descriptions, and Open Graph title/description tags.
+The theme's `Layout` uses the public `useHead` hook for canonical URLs, matching
+language alternatives during navigation, and social previews using the existing logo.
+The 404 page carries `noindex`.
+
+Following the Swipe Deck documentation's SEO setup, `plugins/seo.ts` generates
+`sitemap.xml` from document routes and passes translated route URLs to the theme.
+Rspress 2.0.21 already generates static hreflang links; its head renderer merges
+matching links. Its built-in sitemap option is only available from 2.1.0, so the
+local plugin supports the currently pinned version without extra dependencies.
+`docs/public/robots.txt` advertises the sitemap and excludes the standalone demo app.
+
+`pnpm docs:build` checks the actual static output for localized descriptions,
+canonical/hreflang links, social metadata, sitemap coverage, robots, and AI files.
+Keep these checks passing when adding pages or changing the production domain.
+The official Rspress
+[best-practices](https://github.com/rstackjs/agent-skills/blob/main/skills/rspress-best-practices/SKILL.md)
+and [description-generator](https://github.com/rstackjs/agent-skills/blob/main/skills/rspress-description-generator/SKILL.md)
+skills describe the content conventions used here.
+
 ## Maintain
 
 - Keep matching pages under `docs/docs/en/` and `docs/docs/ko/` in sync. `docs:check` checks

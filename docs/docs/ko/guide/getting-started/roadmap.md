@@ -1,3 +1,7 @@
+---
+description: "Text Motion의 iOS·Android 렌더러 성능 검증 우선순위와 API 범위, 설계 경계, 보류 후보를 확인하고 프로젝트 로드맵 논의에 참여하세요."
+---
+
 # 로드맵
 
 기능 제안, 우선순위와 설계 결정은 [프로젝트 방향·로드맵 Discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10)에서 함께 논의합니다.

@@ -1,3 +1,7 @@
+---
+description: "React Native Reanimated와 Worklets의 호환성을 확인하고, Expo 또는 bare React Native 앱에 Text Motion을 설치하고 설정하세요."
+---
+
 # 설치
 
 Text Motion은 React Native Reanimated와 React Native Worklets를 사용합니다. 텍스트 애니메이션을 렌더링하기 전에 앱에서 서로 호환되는 버전으로 설정하세요.

@@ -2,6 +2,8 @@ import { defineConfig } from '@rspress/core';
 import { transformerNotationDiff, transformerNotationHighlight } from '@shikijs/transformers';
 import { fileURLToPath } from 'node:url';
 
+import { seoPlugin } from './plugins/seo';
+
 const docsRoot = fileURLToPath(new URL('./docs', import.meta.url));
 
 export default defineConfig({
@@ -12,13 +14,16 @@ export default defineConfig({
     { lang: 'ko', label: '한국어' },
   ],
   title: 'React Native Text Motion',
-  description: 'Composable text motion for React Native, powered by Reanimated.',
+  description:
+    'React Native text animation recipes with Reanimated: Typewriter, word and character motion, masked line reveals, presets, and playback controls.',
   icon: '/logo.png',
   logo: '/logo.png',
   logoText: 'Text Motion',
   siteOrigin: 'https://react-native-text-motion.pages.dev',
+  route: { cleanUrls: true },
   llms: true,
   ssg: true,
+  plugins: [seoPlugin()],
   markdown: {
     showLineNumbers: true,
     defaultWrapCode: false,

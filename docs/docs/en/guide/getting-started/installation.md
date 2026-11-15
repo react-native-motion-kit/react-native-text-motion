@@ -1,3 +1,7 @@
+---
+description: "Install Text Motion with React Native Reanimated and Worklets, check peer requirements, and configure Expo or bare React Native builds."
+---
+
 # Installation
 
 Text Motion uses React Native Reanimated and React Native Worklets. Set up compatible versions of these dependencies in your app before rendering animated text.

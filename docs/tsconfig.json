@@ -4,5 +4,5 @@
     "lib": ["DOM", "ESNext"],
     "types": ["node", "react"]
   },
-  "include": ["env.d.ts", "rspress.config.ts", "theme/**/*", "components/**/*"]
+  "include": ["env.d.ts", "rspress.config.ts", "plugins/**/*", "theme/**/*", "components/**/*"]
 }

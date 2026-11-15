@@ -1,4 +1,5 @@
 ---
+description: "Build reusable React Native text animations with Reanimated, composable recipes, presets, Typewriter, rendered-line reveals, and playback controls."
 pageType: home
 
 hero:

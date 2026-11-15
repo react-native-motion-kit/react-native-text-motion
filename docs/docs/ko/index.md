@@ -1,4 +1,5 @@
 ---
+description: "Reanimated 기반 React Native 텍스트 애니메이션을 프리셋과 레시피로 조합하고, Typewriter와 실제 줄 단위 효과, 재생 제어를 적용하세요."
 pageType: home
 
 hero:

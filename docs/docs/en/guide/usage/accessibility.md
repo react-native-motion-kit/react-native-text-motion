@@ -1,3 +1,7 @@
+---
+description: "Configure screen-reader labels, font scaling, and reduced-motion behavior for Text Motion with parentLabelPolicy and supported accessibility props."
+---
+
 # Accessibility
 
 Text Motion treats animated token nodes as decoration. By default, the parent exposes the complete phrase as one accessible label and the individual animated nodes are hidden from accessibility tools. A screen reader should read the phrase once, rather than announcing each word or character.

@@ -1,3 +1,7 @@
+---
+description: "React Native의 TextMotionComponent에서 사용하는 문자열·스타일·재생 제어·외부 progress·접근성 props와 텍스트 변경 시 생명주기를 정리합니다."
+---
+
 # 컴포넌트 Props
 
 레시피의 `.component()`는 `TextMotionComponent`를 반환합니다. 두 기본 렌더러는 `TextMotionComponentProps`를 공통으로 사용합니다.

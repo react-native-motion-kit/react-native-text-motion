@@ -1,3 +1,7 @@
+---
+description: "Choose words, graphemes, authored lines, or custom tokens for Text Motion, with Intl.Segmenter support, fallback limits, and preserved source spacing."
+---
+
 # Text segmentation
 
 Choose token boundaries before choosing their motion. A JavaScript code unit is not necessarily a visible character: emoji, combining accents, and decomposed Hangul can contain several code points.
