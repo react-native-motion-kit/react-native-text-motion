@@ -1,6 +1,6 @@
 {
   "name": "@react-native-motion-kit/text-motion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "High-performance split text animations for React Native, powered by Reanimated and extensible renderers.",
   "keywords": [
     "android",
