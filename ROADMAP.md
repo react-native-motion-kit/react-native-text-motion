@@ -6,6 +6,10 @@ current priorities, deferred candidates, and deliberate design exclusions.
 
 For installation and current API details, use the [published documentation](https://react-native-text-motion.pages.dev/).
 
+## Ongoing discussion
+
+Share feature proposals, priority feedback and design trade-offs in the [project direction and roadmap discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10). This file records the versioned project context and agreed boundaries.
+
 ## Current priority
 
 The next product focus is verifying line renderer performance and platform behavior, then deciding whether state-transition props, `pause`/`seek`/`reverse`, screen focus helpers, in-view helpers, scroll/gesture drivers, word-in-line effects, or Skia renderer candidates deserve first-class APIs. Items listed under Deferred are not release promises. They should move into the stable API only when the behavior, examples, tests, and documentation are ready.

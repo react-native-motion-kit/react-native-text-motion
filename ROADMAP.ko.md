@@ -6,6 +6,10 @@ README를 문서 진입점 위주로 정리하기 전의 [원문](https://github
 
 설치와 현재 API는 [배포 문서](https://react-native-text-motion.pages.dev/ko/)를 참고하세요.
 
+## 진행 중인 논의
+
+기능 제안, 우선순위 의견과 설계상 선택은 [프로젝트 방향·로드맵 Discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10)에 남겨 주세요. 이 파일은 버전 관리되는 프로젝트 맥락과 합의된 범위를 기록합니다.
+
 ## 현재 우선순위
 
 다음 제품 초점은 line renderer performance와 platform behavior를 검증한 뒤, state-transition prop, `pause`/`seek`/`reverse`, screen focus helper, in-view helper, scroll/gesture driver, word-in-line effect, Skia renderer 후보를 first-class API로 올릴 가치가 있는지 판단하는 것입니다. Deferred에 적힌 항목은 release promise가 아닙니다. 동작, 예제, 테스트, 문서가 준비되었을 때만 stable API로 올리는 방향입니다.

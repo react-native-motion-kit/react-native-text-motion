@@ -91,6 +91,8 @@ Measure long paragraphs and many animated rows on target devices. Browser demos 
 
 ## Project direction
 
+Discuss priorities and feature ideas in [Project direction & roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10).
+
 Read the [project context and roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/ROADMAP.md) for priorities and design boundaries before extending the library.
 
 ## Contributing

@@ -91,6 +91,8 @@ Measure long paragraphs and many animated rows on target devices. Browser demos 
 
 ## Project direction
 
+Discuss priorities and feature ideas in [Project direction & roadmap](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10).
+
 Current priorities, deferred API candidates, and deliberate design boundaries are preserved in the [project context and roadmap](./ROADMAP.md).
 
 ## Development

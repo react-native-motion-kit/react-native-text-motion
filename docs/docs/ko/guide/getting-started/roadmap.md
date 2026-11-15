@@ -1,5 +1,7 @@
 # 로드맵
 
+기능 제안, 우선순위와 설계 결정은 [프로젝트 방향·로드맵 Discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10)에서 함께 논의합니다.
+
 라이브러리의 우선순위, 범위와 설계 결정은 저장소의 [프로젝트 맥락과 로드맵](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/ROADMAP.ko.md)에 기록합니다.
 
 현재 우선순위는 iOS와 Android에서 렌더러 성능과 플랫폼 동작을 검증한 뒤, 그 근거로 추가 API를 라이브러리에 포함할지 판단하는 것입니다.

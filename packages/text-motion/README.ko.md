@@ -91,6 +91,8 @@ const WordReveal = defineTextMotion()
 
 ## 프로젝트 방향
 
+우선순위와 기능 아이디어는 [프로젝트 방향·로드맵 Discussion](https://github.com/react-native-motion-kit/react-native-text-motion/discussions/10)에서 논의합니다.
+
 라이브러리 확장 전 현재 우선순위와 설계 범위는 [프로젝트 맥락과 로드맵](https://github.com/react-native-motion-kit/react-native-text-motion/blob/main/ROADMAP.ko.md)을 참고하세요.
 
 ## 개발 참여
