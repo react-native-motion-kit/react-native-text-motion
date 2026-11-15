@@ -1,0 +1,38 @@
+# AI
+
+Give your AI assistant the Text Motion documentation when asking for help with recipes, presets, playback, or troubleshooting.
+
+## llms.txt
+
+This site publishes two files for AI tools:
+
+- [llms.txt](https://react-native-text-motion.pages.dev/llms.txt): a structured index with links to individual documentation pages. Use it when your assistant can fetch the pages it needs, keeping context small.
+- [llms-full.txt](https://react-native-text-motion.pages.dev/llms-full.txt): the complete English documentation in one file. Use it for questions spanning several features or larger refactors, with a higher context cost.
+
+Copy the URL that fits your task:
+
+```txt
+https://react-native-text-motion.pages.dev/llms.txt
+https://react-native-text-motion.pages.dev/llms-full.txt
+```
+
+## Markdown docs
+
+Every documentation page also has a Markdown version. For help with one feature, provide only the relevant page:
+
+```txt
+https://react-native-text-motion.pages.dev/guide/getting-started/quick-start.md
+https://react-native-text-motion.pages.dev/guide/usage/recipes.md
+https://react-native-text-motion.pages.dev/guide/usage/playback.md
+```
+
+If your assistant cannot fetch URLs, open the file and paste its contents or attach it as context.
+
+## Example prompt
+
+```txt
+Read https://react-native-text-motion.pages.dev/guide/getting-started/quick-start.md.
+Create a React Native word reveal using defineTextMotion(), words(), nativeText(),
+stagger(), and fade().and(rise()). Include the imports and an accessible example.
+Use the documented API and explain the timing units.
+```

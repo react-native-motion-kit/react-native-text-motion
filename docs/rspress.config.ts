@@ -16,6 +16,7 @@ export default defineConfig({
   icon: '/logo.png',
   logo: '/logo.png',
   logoText: 'Text Motion',
+  siteOrigin: 'https://react-native-text-motion.pages.dev',
   llms: true,
   ssg: true,
   markdown: {

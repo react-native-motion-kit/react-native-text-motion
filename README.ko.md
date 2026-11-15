@@ -1,34 +1,59 @@
-# @react-native-motion-kit/text-motion
+# React Native Text Motion
 
-한영 Rspress 문서: [개발 및 빌드 안내](./docs/README.md). `pnpm docs:dev`로 로컬 문서를 실행할 수 있습니다.
+> [English](./README.md) | 한국어
 
-React Native에서 고성능 split text animation을 만들기 위한 라이브러리입니다. Reanimated 기반으로 동작하고, 확장 가능한 renderer boundary를 염두에 두고 있습니다.
+<div align="center">
+  <img src="./docs/docs/public/logo.png" width="300" alt="React Native Motion Kit logo" />
+</div>
 
-English documentation: [README.md](./README.md)
+## 소개
 
-Package documentation: [packages/text-motion/README.ko.md](./packages/text-motion/README.ko.md)
+`@react-native-motion-kit/text-motion`은 Reanimated 기반의 React Native 텍스트 애니메이션 라이브러리입니다. 짧은 제목, 레이블, 온보딩 문구에 맞춰 텍스트 분할 방식, 렌더러, 타임라인, 효과를 조합하고 재사용 가능한 컴포넌트를 만듭니다.
 
-이 저장소는 `@react-native-motion-kit/text-motion` 패키지와 Expo example app을 포함하는 pnpm workspace입니다.
+### 주요 기능
 
-## Package
+- **조합 가능한 레시피** — 분할, 레이아웃, 타이밍, 효과를 TypeScript API로 구성합니다.
+- **단어와 글자 애니메이션** — `nativeText()`로 단어나 그래핌을 움직이고 `typewriter()`로 한 글자씩 표시합니다.
+- **실제 줄 기준 모션** — `overlayText()`와 `lineReveal()`로 React Native가 렌더링한 줄을 드러냅니다.
+- **재생 제어** — 이벤트에서 play/replay/reset/stop을 실행하거나 외부 Reanimated shared value로 진행률을 제어합니다.
+- **접근성** — 기본적으로 전체 문장을 하나의 레이블로 제공하고 장식용 토큰은 스크린 리더에서 숨깁니다. 모션 줄이기 설정도 반영합니다.
+- **기본 프리셋** — 프리셋으로 시작하고 필요에 따라 레시피를 조정합니다.
 
-`text-motion`은 `<AnimatedText animation="fadeIn" />`처럼 prop 하나로 preset을 고르는 wrapper가 아닙니다. 텍스트를 어떻게 나눌지, 보이는 token이 언제 시작할지, 어떤 effect를 적용할지를 조합해서 재사용 가능한 animated text component를 만드는 패키지입니다.
+## 빠르게 시작하기
 
-이 패키지는 그 흐름을 recipe pipeline으로 제공합니다.
+### 문서
 
-```txt
-split -> layout(renderer) -> timeline -> effect -> motion/accessibility -> component
+[한국어 문서](https://react-native-text-motion.pages.dev/ko/) · [설치](https://react-native-text-motion.pages.dev/ko/guide/getting-started/installation.html) · [빠른 시작](https://react-native-text-motion.pages.dev/ko/guide/getting-started/quick-start.html)
+
+### 예제
+
+- [예제 모음](https://react-native-text-motion.pages.dev/ko/guide/usage/examples.html) — 동작을 확인하고 예제 코드를 살펴봅니다.
+- [Expo 예제 앱](https://github.com/react-native-motion-kit/react-native-text-motion/tree/main/example) — 레시피, 재생 제어, 네이티브 줄 애니메이션을 실행합니다.
+
+### AI
+
+[AI 도구와 함께 사용하기](https://react-native-text-motion.pages.dev/ko/guide/getting-started/ai.html)에서 문서 활용 방법을 확인하세요.
+
+- [llms.txt](https://react-native-text-motion.pages.dev/ko/llms.txt) — 문서 제목과 링크를 담은 색인입니다.
+- [llms-full.txt](https://react-native-text-motion.pages.dev/ko/llms-full.txt) — 전체 문서를 하나의 텍스트 파일로 제공합니다.
+- [영문 색인](https://react-native-text-motion.pages.dev/llms.txt) · [영문 전체 문서](https://react-native-text-motion.pages.dev/llms-full.txt)
+
+### 설치
+
+```sh
+pnpm add @react-native-motion-kit/text-motion react-native-reanimated react-native-worklets
 ```
 
-빠르게 쓰고 싶으면 preset을 사용하면 되고, tokenization, timing, effect, accessibility, renderer 선택을 직접 잡고 싶으면 recipe를 조합하면 됩니다.
+peer dependency 최소 버전은 Reanimated `4.0.0`, Worklets `0.5.0`입니다. 이 최소값만으로 네이티브 의존성의 호환성이 보장되지는 않습니다. [설치 가이드](https://react-native-text-motion.pages.dev/ko/guide/getting-started/installation.html)와 [Reanimated 공식 설정 안내](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started/)에 따라 앱의 React Native 또는 Expo 버전에 맞게 설정하세요. Reanimated 4는 New Architecture가 필요합니다.
 
-TypeScript에서는 `.layout(...)`으로 renderer를 선택한 뒤에만 `.component()`를 사용할 수 있습니다. 완성 전 recipe를 확인하거나 전달해야 할 때는 layout 전에도 `.recipe()`를 사용할 수 있습니다.
+### 기본 사용법
 
-Preset을 사용한 빠른 예시:
+프리셋에서 컴포넌트를 만들고 애니메이션을 적용할 텍스트를 전달하세요.
 
 ```tsx
 import { editorialRise } from '@react-native-motion-kit/text-motion/presets';
 
+// 재사용할 컴포넌트는 렌더 함수 밖에서 만드세요.
 const HeroReveal = editorialRise().component();
 
 export function HeroTitle() {
@@ -36,7 +61,7 @@ export function HeroTitle() {
 }
 ```
 
-직접 recipe를 조합하는 예시:
+직접 레시피를 조합할 수도 있습니다. `stagger()`의 시간 단위는 초이며, `.component()`를 호출하기 전에 `.layout(...)`으로 렌더러를 선택해야 합니다.
 
 ```tsx
 import {
@@ -51,265 +76,34 @@ import {
 const WordReveal = defineTextMotion()
   .split(words())
   .layout(nativeText())
-  .timeline(stagger(0.034))
-  .effect(fade().and(rise({ y: 10 })))
-  .component();
-```
-
-Playback controls는 button, screen focus, onboarding step처럼 어떤 이벤트가 text motion component에게 play, replay, reset, stop을 지시해야 할 때 유용합니다. 이 경우 앱은 이벤트를 소유하고, text component는 recipe의 `.motion()` 설정으로 playback을 실행합니다.
-
-기본 controls 예시:
-
-```tsx
-import {
-  defineTextMotion,
-  fade,
-  nativeText,
-  rise,
-  stagger,
-  useTextMotionControls,
-  words,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-
-const ReplayableReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
   .timeline(stagger(0.04))
   .effect(fade().and(rise({ y: 12 })))
-  .motion({ kind: 'timing', options: { duration: 420 } })
-  .component();
-
-export function Headline() {
-  const controls = useTextMotionControls();
-
-  return (
-    <>
-      <ReplayableReveal controls={controls}>
-        Replay without remounting
-      </ReplayableReveal>
-      <Button title="Replay" onPress={controls.replay} />
-    </>
-  );
-}
-```
-
-`controls`는 progress value가 아니라 command channel입니다. Button, screen focus, onboarding step, example replay control, title/subtitle 동시 replay에 사용하세요.
-
-성능 관점에서 `controls`는 title, label, product copy 같은 짧은 UI text에 맞춰져 있습니다. 긴 문단, grapheme split copy, 많은 row를 한 번에 움직이려면 target app에서 먼저 측정하세요.
-
-Controlled progress는 text motion이 component 내부 autoplay가 아니라 외부 raw value를 따라가야 할 때 유용합니다. 예를 들어 scroll position, gesture progress, 또는 다른 Reanimated shared value에 맞춰 문장이 움직여야 한다면 앱이 정확한 progress를 소유하고 text component는 현재 상태만 렌더링합니다.
-
-기본 controlled progress 예시:
-
-```tsx
-import {
-  defineTextMotion,
-  fade,
-  nativeText,
-  rise,
-  stagger,
-  words,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
-
-const ControlledReveal = defineTextMotion()
-  .split(words())
-  .layout(nativeText())
-  .timeline(stagger(0.08))
-  .effect(fade().and(rise({ y: 12 })))
-  .component();
-
-export function Headline() {
-  const progress = useSharedValue(0);
-
-  return (
-    <>
-      <ControlledReveal progress={progress}>
-        Progress drives the whole reveal
-      </ControlledReveal>
-      <Button title="Play" onPress={() => (progress.value = withTiming(1))} />
-    </>
-  );
-}
-```
-
-`progress`는 전체 text motion에 대한 normalized progress입니다. `0`은 initial state, `1`은 final state입니다. Timeline delay는 이 global value를 각 token의 local progress로 변환하므로 `stagger()`나 `wave()`의 timing shape가 유지됩니다. 그래서 headline이 card scroll 위치에 맞춰 reveal되거나, gesture를 따라가거나, 여러 UI 요소가 하나의 shared value를 기준으로 함께 움직이는 케이스에 쓸 수 있습니다.
-
-`progress`가 제공되면 `.motion()`은 내부 autoplay를 실행하지 않습니다. 대신 shared value를 업데이트하는 곳에서 playback 느낌을 정하면 됩니다. 예를 들어 `progress.value = withTiming(1, { duration: 720 })` 또는 `progress.value = withSpring(1)`처럼 직접 움직입니다. `controls`와 `progress`는 함께 사용할 수 없습니다.
-
-Line reveal은 React Native가 width, font, font scale, alignment, language shaping을 적용한 뒤 실제로 렌더링한 줄을 기준으로 움직입니다. `overlayText()`와 `lineReveal()`을 함께 쓰고 `.split(...)`은 추가하지 않습니다.
-
-```tsx
-import {
-  defineTextMotion,
-  lineReveal,
-  overlayText,
-  stagger,
-} from '@react-native-motion-kit/text-motion';
-
-const HeroLines = defineTextMotion()
-  .layout(overlayText())
-  .timeline(stagger(0.08))
-  .effect(lineReveal({ y: 18 }))
-  .motion({ kind: 'timing', options: { duration: 420 } })
   .component();
 ```
 
-Responsive hero title, section heading, 짧은 product copy처럼 실제 시각적 줄바꿈이 중요한 곳에 사용하세요. `nativeText()`는 원문 word/grapheme token을 움직이고, `overlayText()`는 실제 rendered line을 움직입니다. `lines()`는 여전히 명시적인 `\n`만 나누는 splitter이며 자동 줄바꿈을 찾지 않습니다. TypeScript와 runtime capability check는 `overlayText()`와 `.split(...)` 조합을 거부합니다.
+자세한 내용은 [레시피 API](https://react-native-text-motion.pages.dev/ko/api/recipe.html), [렌더러](https://react-native-text-motion.pages.dev/ko/api/renderers.html), [재생 제어](https://react-native-text-motion.pages.dev/ko/guide/usage/playback.html)를 참고하세요. `controls`와 외부 `progress`는 함께 사용할 수 없습니다.
 
-`overlayText()`는 rendered line frame에 적용되는 built-in style-transform effect(`fade`, `rise`, `slide`, `shake`, `scale`, `pulse`)도 받습니다. 내부적으로 `lineReveal()`은 opacity를 line frame에 적용하고, vertical reveal offset만 line mask 안의 paragraph copy에 적용합니다. 그래서 `lineReveal().and(scale())` 또는 `pulse()` 조합은 measured line center를 기준으로 커지며 renderer 자신의 line mask에 잘리지 않습니다.
+## 사용 범위
 
-## Typewriter
+짧은 UI 텍스트를 위한 라이브러리이며 네이티브 `Text`의 모든 기능을 대체하지 않습니다. `nativeText()`는 소스 토큰을, `overlayText()`는 실제 렌더링된 줄을 애니메이션 단위로 사용합니다. `overlayText()`에는 `.split(...)`을 추가하지 마세요. `lines()`는 명시적인 `\n`만 분리합니다.
 
-짧은 인사말, 온보딩 문구, 라벨을 한 글자씩 보여주면서 완성 문장의 공간과 줄바꿈을 유지하고 싶다면 `typewriter()`를 사용하세요. 패키지 root에서 가져오는 옵션 없는 effect이며, preset이나 별도 renderer가 아닙니다.
-
-```tsx
-import {
-  defineTextMotion,
-  graphemes,
-  nativeText,
-  parentLabelPolicy,
-  stagger,
-  typewriter,
-  useTextMotionControls,
-} from '@react-native-motion-kit/text-motion';
-import { Button } from 'react-native';
-
-const TypewriterText = defineTextMotion()
-  .split(graphemes())
-  .layout(nativeText())
-  .timeline(stagger(0.04))
-  .effect(typewriter())
-  .motion({ kind: 'timing', options: { duration: 0 } })
-  .accessibility(parentLabelPolicy({ reducedMotion: 'final-state' }))
-  .component();
-
-export function Greeting() {
-  const controls = useTextMotionControls();
-
-  return (
-    <>
-      <TypewriterText controls={controls}>안녕 세계! 👩🏽‍💻</TypewriterText>
-      <Button title="Replay" onPress={controls.replay} />
-    </>
-  );
-}
-```
-
-`stagger(0.04)`의 단위는 초이므로 보이는 글자가 40ms 간격으로 시작합니다. 첫 글자는 첫 playback update에서 나타납니다. 공백과 명시적인 줄바꿈은 자리를 유지하되 delay slot을 소비하지 않고, 문장부호는 일반 글자처럼 slot을 하나 소비합니다. 실제 표시 시각은 기기의 프레임에 맞춰집니다. `duration: 0`은 autoplay와 controls 재생에서 각 글자를 즉시 드러냅니다.
-
-기존 controls로 replay, reset, stop을 실행할 수 있습니다. `stop()`은 현재 상태를 유지하지만, 이후 `play()`가 남은 타이핑 일정을 정확히 이어 주는 것은 아닙니다. 다른 문장을 처음부터 모두 다시 타이핑하려면 React `key`를 바꿔 remount하세요. 텍스트 append는 streaming API가 아닙니다.
-
-외부 재생에는 `controls` 대신 `progress={progress}`를 전달합니다. 해당 instance에서는 `.motion()`을 실행하지 않습니다. **Progress는 표시된 글자의 비율이 아니라 effect timeline의 진행률입니다.** 보이는 글자 10개에 `stagger(0.05)`를 쓰면 progress가 약 `0.310345`를 넘을 때 모두 드러나므로, `0.5`가 다섯 글자를 뜻하지 않습니다. Progress를 줄이면 글자가 다시 숨겨질 수 있습니다. 실제 시간상 일정한 간격으로 드러내려면 외부 timing curve를 linear로 설정하세요.
-
-`typewriter()`에 `rise()`나 `fade()`를 조합할 수도 있습니다. 각 글자는 local progress가 양수가 될 때까지 숨겨지고, 시작한 뒤에는 다른 effect가 계속 적용됩니다. `fade()`를 더하면 의도적으로 서서히 나타납니다. 조합 순서를 바꿔도 이 표시 규칙은 유지됩니다. 글자가 나타난 뒤 움직이는 모습까지 보이려면 `.motion()`에 0보다 큰 duration을 지정하세요.
-
-이 effect는 `nativeText()`만 지원합니다. 해당 renderer가 만든 완성 token layout을 유지하며, 단일 `Text`와 같은 조판·줄바꿈, 커서, 실제 문자열의 글자별 추가·삭제, streaming은 제공하지 않습니다. 내장 grapheme fallback은 이제 `한` 같은 분해 한글 음절을 원문 정규화 없이 한 단위로 보존하지만, Unicode 전체 grapheme 규칙을 구현한 것은 아닙니다. 복잡한 script에는 앱이 제공하는 `Intl.Segmenter`나 `custom()` splitter가 필요할 수 있습니다. 긴 문장이나 많은 row는 target device에서 먼저 성능을 측정하세요.
-
-## Stable MVP Scope
-
-- recipe API: `defineTextMotion().split().layout().timeline().effect().component()`
-- splitters: `graphemes`, `words`, `custom`, experimental newline-only `lines`
-- renderers: `nativeText`, `overlayText`
-- timelines: `stagger`, `sequence`, `parallel`, `wave`
-- effects: `fade`, `rise`, `slide`, `scale`, `pulse`, `shake`, `lineReveal`, `typewriter`
-- presets subpath: `@react-native-motion-kit/text-motion/presets`
-- event-driven play/replay/reset/stop을 위한 명시적인 playback `controls`
-- external Reanimated shared value 기반 controlled progress
-- accessibility default: parent label plus hidden decorative token nodes
-
-`nativeText()`는 title, label, onboarding copy, 짧은 product copy를 위한 transform-first token renderer입니다. Animated token은 React Native 플랫폼에서 transform이 안정적으로 보이도록 animated `View` container와 내부 `Text`로 렌더링됩니다. Static token은 그대로 plain `Text`로 렌더링됩니다. 그래서 `nativeText()`는 원문 word/grapheme motion에는 적합하지만 React Native `Text`의 완전한 drop-in 대체품은 아닙니다. `numberOfLines`, `ellipsizeMode`, `onTextLayout` 같은 layout prop은 stable MVP 계약 밖에 있습니다.
-
-`nativeText({ testIDPrefix })`를 사용하면 generated token `testID`는 animated token container를 가리킵니다. `allowFontScaling`, `maxFontSizeMultiplier`처럼 text rendering에 영향을 주는 prop은 내부 `Text`로 전달됩니다. 이 내용은 테스트와 compatibility를 위한 안내이지, token을 직접 스타일링하기 위한 확장 API가 아닙니다. 매우 긴 문장을 grapheme 단위로 애니메이션하면 native view가 많이 생기므로, 별도 performance checkpoint 전까지는 stress case로 봐야 합니다.
-
-Example app에는 이 checkpoint를 위한 `Playback -> Renderer Performance` 케이스가 있습니다. Target device에서 어떤 workload를 normal, caution, stress로 볼지 판단할 때 사용하세요. 같은 case family를 iOS와 Android에서 모두 확인했을 때만 `measured`라고 부르고, 한 플랫폼만 확인했거나 simulator/emulator/dev mode만 확인했다면 `provisional`로 남깁니다. 아직 확인하지 않은 케이스는 `unknown`입니다.
-
-직접 입력한 hard line break는 지원합니다. 예를 들어
-`"First line\nSecond line"`은 `nativeText()`에서 줄바꿈이 보존되어 렌더링되고,
-newline 자체는 motion index를 소비하지 않습니다. RN이 화면 너비 때문에 자동
-줄바꿈한 실제 줄 자체를 motion unit으로 써야 한다면 `overlayText()`를 사용하세요.
-
-`overlayText()`는 blank 또는 whitespace-only rendered line을 시각적으로 보존하지만, 그 줄은 motion index를 소비하지 않습니다. 움직이는 rendered line마다 full paragraph copy 하나를 사용하므로 비용은 원문 word/grapheme 수가 아니라 visible rendered line 수에 비례합니다. Title, heading, product copy에 맞춘 기능입니다. 같은 case family에서 iOS와 Android evidence가 모두 있기 전에는 measured performance라고 말하지 않습니다.
-
-기본 playback은 lifecycle 기반입니다. mount되면 animated token 또는 line이 자동 실행되고, 같은 text/recipe로 parent rerender가 일어나면 진행 중인 progress를 유지하며, text/effect/timeline/motion이 바뀌면 affected animation을 다시 실행합니다. MVP에서 text change는 enter-only입니다. 이전 text를 남겨 exit animation, crossfade, token diff를 만들지는 않습니다. Component는 event-driven playback을 위한 `controls`와, raw external control을 위한 `progress`도 받습니다. `controls`는 현재 text에 대해 component recipe의 `.motion()`을 사용하고, `progress`는 앱이 소유하는 Reanimated `SharedValue<number>`가 변경된 text도 현재 shared value에 맞춰 제어합니다.
-
-`overlayText()`에서 동일한 line measurement는 replay를 만들지 않습니다. Geometry만 바뀐 relayout은 현재 run을 보존합니다. Line topology가 바뀌면 component-owned playback은 새 rendered line sequence로 한 번 다시 시작합니다. External `progress`를 넘긴 경우 앱이 소유한 shared value가 유지되고 새 geometry에 그대로 적용됩니다. Reduced motion에서는 measurement/playback overlay 없이 최종 readable source text를 즉시 렌더링합니다. Malformed 또는 unsupported native geometry도 readable final source text로 fallback합니다.
-
-첫 valid line measurement가 오기 전에는 source paragraph가 layout 소유자입니다. Effect의 initial scale이 정확히 `1`이면 pending source는 다른 renderer와 같은 combined initial opacity/transform을 유지합니다. Initial scale이 정확히 `1`이 아니면 valid line geometry가 준비될 때까지 pending source를 시각적으로 숨깁니다. 이렇게 해야 처음 보이는 scaled frame이 paragraph center가 아니라 measured line center를 사용합니다.
-
-이 동작은 line 단위 scale/pulse가 renderer 자신의 mask에 잘리는 문제를 해결합니다. 큰 transform을 위해 layout 공간을 추가로 예약하지는 않으며, ancestor의 `overflow: hidden` clipping도 우회하지 않습니다. 둘 다 React Native transform의 정상적인 제약입니다.
-
-Skia, rich text, RN-rendered line-to-token mapping은 deferred 상태입니다. Context/provider playback wiring과 public playback ref는 의도적으로 이 디자인에 포함하지 않습니다. Playback command에 반응해야 하는 component에는 `controls`를 명시적으로 전달하세요.
-
-## Scope & Roadmap
-
-`text-motion`은 split text motion에 집중합니다. 즉 tokenization, layout-aware timing, effect, renderer, split token playback, accessibility, 그리고 title, label, onboarding copy, product copy를 위한 preset이 핵심입니다.
-
-Text token 또는 text layout에 의존하는 기능은 이 패키지에서 고려할 수 있습니다. 예를 들면 scramble, wipe, text-change transition, mask나 word-in-line effect 같은 향후 rendered-line extension, 그리고 명시적인 capability boundary 뒤에 있는 renderer-specific effect가 있습니다.
-
-다른 문제를 푸는 기능은 별도 package가 더 적합할 가능성이 큽니다. Number count-up, odometer, currency, percentage, timer, delta animation은 split-text layout 문제가 아니라 value formatting 문제입니다. 나중에 별도의 value-motion 계열 package가 Motion Kit convention을 공유할 수 있지만, 그 때문에 `text-motion` API surface를 넓히지는 않습니다.
-
-결정 기준은 단순합니다. Text-specific production work를 개선하면서 common recipe API를 더 어렵게 만들지 않을 때만 `text-motion`에 추가합니다.
-
-## 설치
-
-```sh
-pnpm add @react-native-motion-kit/text-motion react-native-reanimated react-native-worklets
-```
-
-MVP의 peer dependency minimum은 `react-native-reanimated@>=4.0.0`, `react-native-worklets@>=0.5.0`입니다. 앱에서는 Reanimated의 New Architecture 및 Worklets 설정을 따라야 합니다.
-
-## Workspace
-
-```txt
-react-native-text-motion/
-  example/
-  packages/
-    text-motion/
-```
+긴 문단이나 많은 애니메이션 행은 대상 기기에서 측정하세요. 브라우저 예제는 네이티브 성능 측정 자료가 아닙니다. [성능 안내](https://react-native-text-motion.pages.dev/ko/guide/usage/performance.html)와 [접근성 안내](https://react-native-text-motion.pages.dev/ko/guide/usage/accessibility.html)를 참고하세요.
 
 ## 개발
 
+이 저장소는 라이브러리, Expo 예제 앱, 한영 Rspress 문서를 포함하는 pnpm workspace입니다.
+
 ```sh
 corepack pnpm install
+corepack pnpm run lint
 corepack pnpm run typecheck
 corepack pnpm run test
 corepack pnpm run build
-corepack pnpm run example:build
+corepack pnpm run docs:dev
 ```
 
-관련 문서:
-
-- [Package README](./packages/text-motion/README.md)
-- [Package Korean README](./packages/text-motion/README.ko.md)
-
-## 지금 사용해도 될까?
-
-다음 경우라면 지금 이 패키지를 써볼 만합니다.
-
-- title, label, onboarding copy, product copy처럼 짧은 React Native 텍스트에 entrance motion을 넣고 싶을 때
-- Reanimated 기반 word-level 또는 grapheme-level reveal effect가 필요할 때
-- 완성 문장의 배치를 유지하면서 한 글자씩 드러나는 Typewriter가 필요할 때
-- 일회성 animation prop보다 재사용 가능한 motion recipe를 만들고 싶을 때
-- screen reader가 split token을 하나씩 읽지 않고 문장을 한 번만 읽어야 할 때
-- button, screen focus, onboarding step에서 remount 없이 replay/reset/stop을 실행하고 싶을 때
-- scroll, gesture, 또는 여러 UI 요소가 공유하는 Reanimated value로 text motion progress를 직접 제어하고 싶을 때
-- responsive hero title, heading, 짧은 product copy를 실제 rendered line 기준으로 reveal하고 싶을 때
-- Skia를 필수 dependency로 넣지 않는 가벼운 core package가 필요할 때
-
-다음이 필요하다면 이후 버전을 기다리는 편이 좋습니다.
-
-- `pause`, `seek`, `reverse` 같은 추가 playback API
-- first-class scroll, gesture, in-view driver
-- token별 line mapping 또는 word-in-line animation
-- blur, glow, shader, mask, glyph distortion 같은 Skia effect
-- link, selectable text, rich nested text, 완전한 native `Text` layout parity
-- 긴 문장, virtualized list, dense UI에서 자체 성능 검증 없이 많이 쓰는 경우
-
-다음 초점은 line renderer performance와 platform behavior를 검증한 뒤, state-transition prop, `pause`/`seek`/`reverse`, screen focus helper, in-view helper, scroll/gesture driver, word-in-line effect, optional Skia renderer를 first-class API로 올릴 가치가 있는지 판단하는 것입니다.
+[기여 가이드](./CONTRIBUTING.md) · [문서 개발](./docs/README.md) · [패키지 README](./packages/text-motion/README.ko.md) · [릴리스](./RELEASING.md)
 
 ## License
 
-MIT
+[MIT](./LICENSE)
